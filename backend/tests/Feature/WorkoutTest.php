@@ -74,7 +74,10 @@ class WorkoutTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
-        $this->assertEquals('2026-03-15T00:00:00.000000Z', $response->json('data.0.date'));
+        // La API devuelve instantes en UTC. Con la aplicación en Europe/Madrid, la
+        // medianoche del 15 de marzo (CET, +01:00) es el 14 a las 23:00 UTC. Quien
+        // consuma esto tiene que convertir a Madrid antes de quedarse con el día.
+        $this->assertEquals('2026-03-14T23:00:00.000000Z', $response->json('data.0.date'));
     }
 
     public function test_index_all_devuelve_todos_los_resultados_sin_paginacion()

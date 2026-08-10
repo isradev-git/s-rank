@@ -37,7 +37,7 @@ return new class extends Migration
             $table->text('instructions');                   // Pasos de preparación
             $table->string('difficulty')->default('fácil'); // fácil / media / difícil
             $table->boolean('is_system')->default(true);    // true = receta del sistema (seeder)
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignUuid('user_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
 
             $table->index('category');

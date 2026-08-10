@@ -234,6 +234,12 @@ APP_NAME=S-RANK
 
 Hacer el mismo cambio en `backend/.env.example`, pero dejando `DB_PASSWORD=` vacío.
 
+`APP_LOCALE` se queda en `en`. Laravel 12 solo trae los textos de validación en inglés;
+ponerlo en español sin publicar las traducciones haría que la API devolviera claves crudas
+del tipo `validation.required`. Los mensajes que ve el usuario los escribe la app, y los
+pocos que salen del servidor ya están en español a mano. Las traducciones de validación
+se añaden en la fase 1.1, cuando haya formularios que las enseñen.
+
 - [ ] **Paso 3: Fijar la zona horaria de la aplicación**
 
 En `backend/config/app.php`, línea 68, cambiar:
@@ -245,6 +251,16 @@ En `backend/config/app.php`, línea 68, cambiar:
 Ojo con esto: las marcas de tiempo ya guardadas se reinterpretan (estaban en UTC). Con 18
 entrenos registrados a media tarde el efecto es nulo; solo cambiaría el día en registros
 hechos entre las 22:00 y las 00:00 UTC.
+
+**Regla que hay que llevarse a la app:** la API sigue serializando las fechas en UTC, que
+es lo estándar y lo que Laravel hace por defecto. Con la aplicación en Madrid, un entreno
+del 15 de marzo a medianoche sale como `2026-03-14T23:00:00.000000Z`. **El día natural se
+calcula siempre en Madrid**, en el servidor y en la app: quedarse con los diez primeros
+caracteres de la cadena UTC da el día anterior. En Android hay que parsear el instante y
+convertirlo a `ZoneId.of("Europe/Madrid")` antes de mostrar o agrupar por día.
+
+(Se probó a serializar con desfase local mediante `Carbon::serializeUsing()`; en Carbon 3
+ya no afecta a `toJSON()`, así que no se toca nada y se documenta la regla.)
 
 - [ ] **Paso 4: Escribir `config/srank.php` con todas las constantes de balanceo**
 
@@ -593,8 +609,6 @@ APP_KEY=
 APP_DEBUG=false
 APP_URL=https://rank-s.israelzamora.es
 APP_TIMEZONE=Europe/Madrid
-APP_LOCALE=es
-APP_FALLBACK_LOCALE=es
 
 LOG_CHANNEL=stack
 LOG_LEVEL=error

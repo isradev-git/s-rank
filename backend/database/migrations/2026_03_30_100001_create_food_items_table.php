@@ -26,7 +26,7 @@ return new class extends Migration
             $table->decimal('fiber_per_100g', 7, 2)->default(0);
             $table->decimal('sugar_per_100g', 7, 2)->default(0);
             $table->boolean('is_verified')->default(false); // true = alimento del sistema (validado)
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // null = sistema
+            $table->foreignUuid('user_id')->nullable()->constrained()->nullOnDelete(); // null = sistema
             $table->timestamps();
 
             // Índice para búsqueda rápida por nombre
