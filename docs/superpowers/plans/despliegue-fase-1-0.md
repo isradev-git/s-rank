@@ -70,7 +70,7 @@ se repite, cambiar `DB_HOST=localhost` por `DB_HOST=127.0.0.1`: fuerza TCP y se 
 
 Antes de escribir Android se revisó lo desplegado. Las cuentas de prueba y la contraseña
 temporal de `hola@israelzamora.es` quedaron resueltas. Lo demás cambió en el código y
-**entra en el siguiente despliegue**:
+**ya está subido y verificado en producción**:
 
 | Qué | Por qué |
 |---|---|
@@ -81,7 +81,24 @@ temporal de `hola@israelzamora.es` quedaron resueltas. Lo demás cambió en el c
 | `s-rank`, no `rank-s` | `build-deploy.sh` y `.env.produccion.example` nombraban un subdominio que no existe. El script decía que subieras a `public_html/rank-s.israelzamora.es/` |
 | `MAIL_PORT=465` + `MAIL_SCHEME=smtps` en el ejemplo | El ejemplo decía 587/`smtp` mientras producción usa el 465. Reconstruir el `.env` desde el ejemplo repetía el fallo del correo |
 
-⚠️ Al subir este despliegue, `/informe-salud` deja de existir. Ya no funcionaba.
+Comprobado contra el servidor después de subir:
+
+| Comprobación | Resultado |
+|---|---|
+| `/informe-salud` y `/informe-salud/pdf` | 404 — antes 500 |
+| `/api/user` sin token | 401 con cuerpo JSON |
+| Login sin contraseña | 422 y «Falta la contraseña.» — confirma que `lang/es` subió, que el locale resuelve a `es` sin tocar el `.env`, y que no quedaba configuración cacheada vieja |
+| `Set-Cookie` | ninguna, en ninguna respuesta |
+| Límite de intentos | vivo: `x-ratelimit-limit: 5` |
+| Cabeceras | HSTS un año, `X-Frame-Options`, `X-Content-Type-Options` |
+
+Lo único que no se pudo comprobar desde fuera es la respuesta de un login **correcto**,
+que es donde vivía la cookie: hace falta una cuenta real y una contraseña no se escribe en
+una conversación. El código ya no la emite y ninguna otra respuesta trae `Set-Cookie`.
+
+⚠️ El FTP sobrescribe pero no borra: `app/Http/Middleware/EnsureAuthenticated.php` sigue
+en el servidor si no se ha borrado a mano. No lo referencia nada, pero es la vía de la
+cookie esperando a que alguien la reenganche.
 
 ## Recordatorio
 
