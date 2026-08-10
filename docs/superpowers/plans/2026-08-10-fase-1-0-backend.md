@@ -1825,25 +1825,48 @@ class QuestServiceTest extends TestCase
 
     public function test_completar_todas_las_obligatorias_da_el_bonus_una_sola_vez()
     {
-        $user = User::factory()->create();
+        // Sin objetivo nutricional no hay misión de proteína, así que las obligatorias
+        // son tres: entrenar, agua y la rotativa. Hay que cumplirlas de verdad: sync()
+        // recalcula el progreso desde los datos, así que tocar la columna a mano no
+        // sirve de nada. La rotativa se decide sola, de modo que se satisfacen las tres
+        // posibilidades (peso, tres comidas y suplementos).
+        $user = User::factory()->create(['weekly_goal' => 1, 'water_goal_ml' => 500]);
         $service = app(QuestService::class);
-        $service->generate($user, $this->hoy);
 
-        // Damos por cumplidas todas las obligatorias sin pasar por sync()
-        DailyQuest::where('user_id', $user->id)->where('is_optional', false)
-            ->update(['progress' => 999999, 'target' => 1]);
+        Workout::create([
+            'user_id' => $user->id, 'mode' => 'gym',
+            'date' => $this->hoy->toDateTimeString(), 'duration_minutes' => 45,
+        ]);
+        WaterLog::create(['user_id' => $user->id, 'date' => $this->hoy->toDateString(), 'amount_ml' => 500]);
+        WeightLog::create(['user_id' => $user->id, 'date' => $this->hoy->toDateString(), 'weight' => 80]);
+
+        foreach (['breakfast', 'lunch', 'dinner'] as $tipo) {
+            MealLog::create([
+                'user_id' => $user->id, 'date' => $this->hoy->toDateString(),
+                'meal_type' => $tipo, 'custom_food_name' => 'Algo', 'quantity_grams' => 100,
+            ]);
+        }
+
+        foreach (['multivitaminas', 'omega3', 'vitamina_d', 'magnesio'] as $suplemento) {
+            SupplementLog::create([
+                'user_id' => $user->id, 'date' => $this->hoy->toDateString(),
+                'supplement_key' => $suplemento, 'taken' => true,
+            ]);
+        }
+
+        $service->generate($user, $this->hoy);
 
         $resultado = $service->sync($user, $this->hoy);
 
         $this->assertDatabaseHas('xp_events', [
             'user_id' => $user->id, 'source' => 'quest_bonus', 'amount' => 40,
         ]);
+        $this->assertGreaterThan(0, $resultado['xp']);
 
         $service->sync($user, $this->hoy);
 
-        $this->assertSame(1, \App\Models\XpEvent::where('user_id', $user->id)
+        $this->assertSame(1, XpEvent::where('user_id', $user->id)
             ->where('source', 'quest_bonus')->count());
-        $this->assertGreaterThan(0, $resultado['xp']);
     }
 
     public function test_la_opcional_se_marca_a_mano()
