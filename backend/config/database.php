@@ -43,6 +43,14 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
+        // Solo para la importación única desde FitLoop. Se borra al cerrar la fase 1.
+        'sqlite_legacy' => [
+            'driver' => 'sqlite',
+            'database' => env('LEGACY_SQLITE_PATH', ''),
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),

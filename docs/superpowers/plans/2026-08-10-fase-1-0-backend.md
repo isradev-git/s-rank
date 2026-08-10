@@ -359,6 +359,21 @@ Se editan las migraciones originales en vez de añadir una nueva porque nunca ha
 a ejecutarse contra MySQL, y en los datos reales las dos columnas están a nulo en las
 1.506 filas de `food_items` y las 26 de `recipes`: no hay nada que convertir.
 
+**Y dos migraciones que se ejecutan antes que la tabla a la que apuntan.** Cinco ficheros
+comparten el sello `2026_01_11_150829`, así que Laravel los ordena por nombre y
+`create_exercise_sets_table` cae antes que `create_workouts_table`. La clave ajena apunta
+a una tabla que todavía no existe: en SQLite da igual, MySQL vuelve a fallar con el
+errno 150. Se arregla renombrando los dos hijos para que vayan detrás de sus padres:
+
+```bash
+cd backend/database/migrations
+git mv 2026_01_11_150829_create_exercise_sets_table.php      2026_01_11_150831_create_exercise_sets_table.php
+git mv 2026_01_11_150829_create_template_exercises_table.php 2026_01_11_150831_create_template_exercises_table.php
+```
+
+Renombrar es seguro: la tabla `migrations` de producción no viaja —el comando de
+importación copia solo las tablas de datos— así que MySQL parte de cero.
+
 - [ ] **Paso 8: Migrar el esquema a MySQL vacío**
 
 ```bash
@@ -419,7 +434,10 @@ use Illuminate\Support\Facades\DB;
 
 class ImportSqlite extends Command
 {
-    protected $signature = 'srank:import-sqlite {path : Ruta al database.sqlite de FitLoop}';
+    protected $signature = 'srank:import-sqlite
+                            {path : Ruta al database.sqlite de FitLoop}
+                            {--force : No preguntar antes de vaciar las tablas de destino}';
+
     protected $description = 'Copia los datos de FitLoop (SQLite) a la base MySQL de S-RANK';
 
     /**
@@ -454,7 +472,8 @@ class ImportSqlite extends Command
         Config::set('database.connections.sqlite_legacy.database', realpath($path));
         $source = DB::connection('sqlite_legacy');
 
-        if (! $this->confirm('Esto BORRA el contenido actual de las tablas de destino. ¿Seguir?', false)) {
+        if (! $this->option('force')
+            && ! $this->confirm('Esto BORRA el contenido actual de las tablas de destino. ¿Seguir?', false)) {
             return self::FAILURE;
         }
 
@@ -492,7 +511,7 @@ class ImportSqlite extends Command
 
 ```bash
 cd backend
-php artisan srank:import-sqlite ../old/database/database.sqlite
+php artisan srank:import-sqlite ../old/database/database.sqlite --force
 ```
 
 - [ ] **Paso 4: Verificar los recuentos contra el origen**
