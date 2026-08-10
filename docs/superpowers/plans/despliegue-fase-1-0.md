@@ -68,9 +68,8 @@ se repite, cambiar `DB_HOST=localhost` por `DB_HOST=127.0.0.1`: fuerza TCP y se 
 
 ## Repaso previo a la fase 1.1
 
-Antes de escribir Android se revisó lo desplegado. Las cuentas de prueba y la contraseña
-temporal de `hola@israelzamora.es` quedaron resueltas. Lo demás cambió en el código y
-**ya está subido y verificado en producción**:
+Antes de escribir Android se revisó lo desplegado. Lo que cambió en el código **ya está
+subido y verificado en producción**:
 
 | Qué | Por qué |
 |---|---|
@@ -99,6 +98,27 @@ una conversación. El código ya no la emite y ninguna otra respuesta trae `Set-
 ⚠️ El FTP sobrescribe pero no borra: `app/Http/Middleware/EnsureAuthenticated.php` sigue
 en el servidor si no se ha borrado a mano. No lo referencia nada, pero es la vía de la
 cookie esperando a que alguien la reenganche.
+
+## Sigue pendiente
+
+**`hola@israelzamora.es` conserva la contraseña temporal.** Se escribió en una
+conversación de la fase 1.0, así que vive en un historial de chat que ni caduca ni se
+puede retirar, y da acceso a datos de salud reales. No está en el repositorio —se
+comprobó— pero eso no la hace menos válida. Se cambia desde la propia API:
+
+```
+PUT /api/user/password
+{ current_password, new_password, new_password_confirmation }
+```
+
+Hace falta el token de una sesión iniciada, así que primero se entra con la temporal.
+`changePassword` borra todos los tokens del usuario al terminar, o sea que el cambio
+invalida por sí solo cualquier sesión emitida con la contraseña vieja. No hay que tocar
+nada en phpMyAdmin.
+
+La otra vía es `forgot-password` + `reset-password`, que además prueba de paso que el
+correo saliente funciona. Dos pájaros de un tiro, porque ese envío tampoco se ha
+verificado desde el despliegue.
 
 ## Recordatorio
 
