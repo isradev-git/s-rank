@@ -81,7 +81,7 @@ los conoce a todos; los controladores no conocen ninguno.
 cd /mnt/c/Users/pc2/Documents/1_propio/fit_app_android_beta
 rsync -a \
   --exclude='vendor/' --exclude='node_modules/' --exclude='deploy/' \
-  --exclude='.env' --exclude='.env.*' --exclude='database/*.sqlite*' \
+  --exclude='.env' --exclude='.env.produccion' --exclude='database/*.sqlite*' \
   --exclude='docs/' --exclude='alimentos/' --exclude='.claude/' \
   old/ backend/
 ```
@@ -166,8 +166,23 @@ cubre tanto `backend/` como `old/` sin tocar nada: el punto que pedía el spec �
 - [ ] **Paso 7: Ejecutar la suite existente — tiene que pasar entera**
 
 Ejecutar: `cd backend && php artisan test`
-Esperado: PASS en los 14 ficheros de `tests/Feature` y `tests/Unit`. Si algo falla aquí,
-es que la poda se llevó por delante algo que la API usaba: arreglarlo antes de seguir.
+
+FitLoop llega con cuatro tests caducados que fallaban ya antes de tocar nada: prueban un
+contrato que el código cambió y nadie actualizó. Hay que arreglarlos aquí, porque esta
+suite es la puerta de todas las tareas siguientes.
+
+- `WorkoutTest` ×3 — mandan `'sets' => 3` (un número). Desde el commit `aa2d709` cada
+  serie es una fila, así que `sets` es un array de series. Cambiar los tres payloads a
+  `'sets' => [['reps' => 10, 'weight_kg' => 80], ...]`.
+- `MealLogTest > destroy comida de otro usuario retorna 404` — el borrado se hizo
+  idempotente a propósito y responde 200. Lo que hay que comprobar no es el código de
+  estado sino que la fila del otro usuario sigue ahí: cambiar a `assertOk()` más un
+  `assertDatabaseHas`.
+- `ExampleTest` — comprueba que `GET /` redirige a `/login`. En una API no hay raíz ni
+  login web: se borra el fichero.
+
+Esperado tras arreglarlos: **188 tests en verde**. Cualquier otro fallo sí sería culpa de
+la poda y hay que resolverlo antes de seguir.
 
 - [ ] **Paso 8: Commit**
 

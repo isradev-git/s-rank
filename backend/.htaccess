@@ -1,0 +1,28 @@
+# FitLoop — despliegue en carpeta unica (Ginernet).
+# El dominio apunta a ESTA carpeta y Laravel se sirve desde /public en UN SOLO salto.
+# El salto unico es clave: evita perder el header Authorization (Bearer/Sanctum),
+# que es lo que rompe el login si se hace doble rewrite root -> public -> index.php.
+# Requiere mod_rewrite (activo por defecto en Ginernet).
+#
+# NOTA: si en el panel pones el Document Root del subdominio en .../public,
+# este fichero sobra (solo correria public/.htaccess). Es la opcion mas limpia.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Reinyecta el header Authorization (Bearer) hacia PHP — Sanctum lo necesita
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Bloquea acceso web directo a ficheros/carpetas internas del proyecto
+    RewriteRule ^(\.env.*|\.git.*|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L]
+
+    # Validacion SSL de cPanel (.well-known): servir tal cual
+    RewriteRule ^\.well-known/ - [L]
+
+    # Ficheros reales dentro de /public (assets, build, favicon, sw.js...): servir directos
+    RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Todo lo demas -> front controller de Laravel, en un solo salto interno
+    RewriteRule ^ public/index.php [L]
+</IfModule>
