@@ -55,6 +55,29 @@ class RegisterAndResetTest extends TestCase
         Notification::assertCount(1);
     }
 
+    public function test_si_el_smtp_falla_la_respuesta_sigue_siendo_la_misma()
+    {
+        // Un servidor de correo inalcanzable: el envío lanza excepción de verdad.
+        config([
+            'mail.default'            => 'smtp',
+            'mail.mailers.smtp.host'  => '127.0.0.1',
+            'mail.mailers.smtp.port'  => 1,
+        ]);
+
+        User::factory()->create(['email' => 'isra@example.com']);
+
+        $existe   = $this->postJson('/api/auth/forgot-password', ['email' => 'isra@example.com']);
+        $noExiste = $this->postJson('/api/auth/forgot-password', ['email' => 'nadie@example.com']);
+
+        // Mismo código y mismo cuerpo: desde fuera no se distingue si la cuenta existe.
+        $existe->assertOk();
+        $noExiste->assertOk();
+        $this->assertSame($noExiste->json('message'), $existe->json('message'));
+
+        // Y el código se ha guardado, para que reenviar el correo más tarde valga.
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => 'isra@example.com']);
+    }
+
     public function test_el_codigo_correcto_cambia_la_contrasena_y_cierra_las_sesiones()
     {
         $user = User::factory()->create(['email' => 'isra@example.com']);

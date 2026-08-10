@@ -62,7 +62,15 @@ class AuthController extends Controller
                 ['token' => Hash::make($code), 'created_at' => now()]
             );
 
-            $user->notify(new ResetPasswordCode($code));
+            // Si el SMTP falla, el que pregunta no puede enterarse por la respuesta:
+            // contestar distinto aquí convertiría este endpoint en un comprobador de
+            // qué correos están registrados, que es justo lo que evita responder
+            // siempre lo mismo. El fallo queda en el log, que es donde hay que mirarlo.
+            try {
+                $user->notify(new ResetPasswordCode($code));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->json([
