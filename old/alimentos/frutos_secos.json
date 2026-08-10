@@ -1,0 +1,27 @@
+{
+  "frutos_secos": [
+    {"nombre": "Almendra", "calorias": 619},
+    {"nombre": "Almendras garrapiñadas", "calorias": 515},
+    {"nombre": "Almendras tostadas", "calorias": 595},
+    {"nombre": "Almendras, crudas", "calorias": 619},
+    {"nombre": "Anacardos, crudos", "calorias": 60},
+    {"nombre": "Avellana", "calorias": 674},
+    {"nombre": "Bellota", "calorias": 387},
+    {"nombre": "Cacahuates", "calorias": 605},
+    {"nombre": "Castaña", "calorias": 210},
+    {"nombre": "Castañas, asadas", "calorias": 275},
+    {"nombre": "Chia", "calorias": 455},
+    {"nombre": "Linaza", "calorias": 494},
+    {"nombre": "Mani sin sal", "calorias": 624},
+    {"nombre": "Mantequilla de almendras", "calorias": 652},
+    {"nombre": "Mantequilla de mani", "calorias": 600},
+    {"nombre": "Mix frutos secos", "calorias": 507},
+    {"nombre": "Mix semillas", "calorias": 636},
+    {"nombre": "Nueces de macadamia", "calorias": 731},
+    {"nombre": "Nueces peladas", "calorias": 306},
+    {"nombre": "Nuez de brasil", "calorias": 707},
+    {"nombre": "Pistacho", "calorias": 615},
+    {"nombre": "Piñón", "calorias": 596},
+    {"nombre": "Semilla de amapola", "calorias": 533}
+  ]
+}

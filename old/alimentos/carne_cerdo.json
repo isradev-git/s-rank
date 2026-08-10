@@ -1,0 +1,18 @@
+{
+  "cerdo": [
+    {"nombre": "Asado", "calorias": 159},
+    {"nombre": "Carne de cerdo", "calorias": 279},
+    {"nombre": "Cerdo", "calorias": 219},
+    {"nombre": "Cerdo asado", "calorias": 296},
+    {"nombre": "Chuleta de cerdo, ahumada", "calorias": 133},
+    {"nombre": "Chuletas de cerdo", "calorias": 133},
+    {"nombre": "Costillas de cerdo", "calorias": 189},
+    {"nombre": "Lomo de cerdo asado", "calorias": 247},
+    {"nombre": "Lomo de cerdo crudo", "calorias": 219},
+    {"nombre": "Lomo de cerdo", "calorias": 106},
+    {"nombre": "Paleta de cerdo", "calorias": 197},
+    {"nombre": "Salchicha de cerdo", "calorias": 293},
+    {"nombre": "Salsiccia", "calorias": 304},
+    {"nombre": "Solomillo De Cerdo", "calorias": 106}
+  ]
+}

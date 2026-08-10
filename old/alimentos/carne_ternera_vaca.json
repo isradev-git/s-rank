@@ -1,0 +1,24 @@
+{
+  "ternera": [
+    {"nombre": "Bistec", "calorias": 146},
+    {"nombre": "Bistec de res", "calorias": 146},
+    {"nombre": "Bola de lomo", "calorias": 121},
+    {"nombre": "Carne al horno", "calorias": 221},
+    {"nombre": "Carne de res molida", "calorias": 208},
+    {"nombre": "Carne de ternera cruda", "calorias": 125},
+    {"nombre": "Carne de vaca", "calorias": 156},
+    {"nombre": "Charqui", "calorias": 457},
+    {"nombre": "Corned beef", "calorias": 141},
+    {"nombre": "Costilla de vaca", "calorias": 241},
+    {"nombre": "Entrecot de ternera", "calorias": 153},
+    {"nombre": "Filete de ternera", "calorias": 121},
+    {"nombre": "Hamburguesa ternera", "calorias": 143},
+    {"nombre": "Lomito", "calorias": 133},
+    {"nombre": "Milanesa de ternera", "calorias": 228},
+    {"nombre": "Pata de res", "calorias": 152},
+    {"nombre": "Rabo de toro", "calorias": 297},
+    {"nombre": "Rosbif", "calorias": 130},
+    {"nombre": "Tacos de bistec", "calorias": 225},
+    {"nombre": "Ternera", "calorias": 125}
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "comida_rapida": [
+    {"nombre": "Alas de pollo", "calorias": 178},
+    {"nombre": "Aros de cebolla", "calorias": 252},
+    {"nombre": "Burger King, Doble Whopter", "calorias": 266},
+    {"nombre": "Cebollas, asadas", "calorias": 590},
+    {"nombre": "Cheeseburger", "calorias": 281},
+    {"nombre": "Choripan", "calorias": 161},
+    {"nombre": "Double cheeseburger", "calorias": 269},
+    {"nombre": "Empanada de pollo", "calorias": 42},
+    {"nombre": "Empanada de queso", "calorias": 310},
+    {"nombre": "Hamburguesa", "calorias": 297},
+    {"nombre": "Hamburguesa de pollo", "calorias": 256},
+    {"nombre": "Hamburguesa pollo", "calorias": 193},
+    {"nombre": "Hamburguesa vegetal", "calorias": 216},
+    {"nombre": "Hamburguesa vegetariana", "calorias": 216},
+    {"nombre": "Hot dog", "calorias": 235},
+    {"nombre": "Kebab", "calorias": 158},
+    {"nombre": "Mac (McDonald's)", "calorias": 259},
+    {"nombre": "McDonalds McRib", "calorias": 226},
+    {"nombre": "McPollo", "calorias": 230},
+    {"nombre": "Nuggets de pollo", "calorias": 252},
+    {"nombre": "Papas fritas", "calorias": 312},
+    {"nombre": "Pizza burger", "calorias": 252},
+    {"nombre": "Quesadilla de queso", "calorias": 394},
+    {"nombre": "Rollito de primavera", "calorias": 212},
+    {"nombre": "Sándwich de pollo", "calorias": 249},
+    {"nombre": "Sándwich de queso", "calorias": 285},
+    {"nombre": "Whopper (Burger King)", "calorias": 250},
+    {"nombre": "Whopper Doble", "calorias": 252}
+  ]
+}

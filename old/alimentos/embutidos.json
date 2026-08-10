@@ -1,0 +1,32 @@
+{
+  "embutidos": [
+    {"nombre": "Bockwurst", "calorias": 275},
+    {"nombre": "Bresaola", "calorias": 151},
+    {"nombre": "Chorizo", "calorias": 395},
+    {"nombre": "Fuet", "calorias": 420},
+    {"nombre": "Jamon crudo", "calorias": 224},
+    {"nombre": "Jamon de pavo cocido", "calorias": 93},
+    {"nombre": "Jamon pavo cocido", "calorias": 89},
+    {"nombre": "Jamon pechuga de pavo", "calorias": 94},
+    {"nombre": "Jamón", "calorias": 87},
+    {"nombre": "Jamón cocido", "calorias": 128},
+    {"nombre": "Jamón de pavo", "calorias": 83},
+    {"nombre": "Jamón serrano", "calorias": 232},
+    {"nombre": "Jamón york", "calorias": 101},
+    {"nombre": "Kielbasa", "calorias": 325},
+    {"nombre": "Leberwurst", "calorias": 337},
+    {"nombre": "Longaniza", "calorias": 515},
+    {"nombre": "Lyon", "calorias": 310},
+    {"nombre": "Mettwurst", "calorias": 297},
+    {"nombre": "Morcilla", "calorias": 368},
+    {"nombre": "Mortadela", "calorias": 317},
+    {"nombre": "Nratwurst", "calorias": 292},
+    {"nombre": "Pastrami", "calorias": 147},
+    {"nombre": "Pechuga de pavo, ahumado", "calorias": 105},
+    {"nombre": "Pechuga de pavo, en lonchas", "calorias": 109},
+    {"nombre": "Salchicha parrillera", "calorias": 304},
+    {"nombre": "Salchicha polaca", "calorias": 326},
+    {"nombre": "Salsiccia", "calorias": 304},
+    {"nombre": "Sobrasada", "calorias": 572}
+  ]
+}

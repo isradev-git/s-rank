@@ -1,0 +1,14 @@
+{
+  "setas": [
+    {"nombre": "Champiñones salteados", "calorias": 60},
+    {"nombre": "Rebozuelos", "calorias": 32},
+    {"nombre": "Setas", "calorias": 25},
+    {"nombre": "Setas de ostra", "calorias": 35},
+    {"nombre": "Setas empanadas", "calorias": 98},
+    {"nombre": "Setas morillas", "calorias": 28},
+    {"nombre": "Setas porcini", "calorias": 39},
+    {"nombre": "Setas porcini, secados", "calorias": 272},
+    {"nombre": "Setas shiitake", "calorias": 46},
+    {"nombre": "Trufas", "calorias": 91}
+  ]
+}

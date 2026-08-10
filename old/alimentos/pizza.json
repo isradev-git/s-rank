@@ -1,0 +1,24 @@
+{
+  "pizza": [
+    {"nombre": "Calzone", "calorias": 227},
+    {"nombre": "Masa de pizza", "calorias": 307},
+    {"nombre": "Pizza", "calorias": 222},
+    {"nombre": "Pizza barbacoa", "calorias": 231},
+    {"nombre": "Pizza capricciosa", "calorias": 169},
+    {"nombre": "Pizza carbonara", "calorias": 352},
+    {"nombre": "Pizza casera", "calorias": 274},
+    {"nombre": "Pizza cuatro quesos", "calorias": 297},
+    {"nombre": "Pizza de pepperoni", "calorias": 239},
+    {"nombre": "Pizza de pollo", "calorias": 243},
+    {"nombre": "Pizza de queso", "calorias": 303},
+    {"nombre": "Pizza hawaiana", "calorias": 196},
+    {"nombre": "Pizza jamon y queso", "calorias": 229},
+    {"nombre": "Pizza kebab", "calorias": 129},
+    {"nombre": "Pizza margarita", "calorias": 240},
+    {"nombre": "Pizza mexicana", "calorias": 99},
+    {"nombre": "Pizza mozzarella", "calorias": 222},
+    {"nombre": "Pizza napoli", "calorias": 234},
+    {"nombre": "Pizza salami", "calorias": 239},
+    {"nombre": "Pizza vegetariana", "calorias": 156}
+  ]
+}

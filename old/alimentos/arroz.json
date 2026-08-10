@@ -1,0 +1,18 @@
+{
+  "arroz_y_productos": [
+    {"nombre": "Arroz Basmati Cocido", "calorias": 130},
+    {"nombre": "Arroz amarillo con pollo", "calorias": 150},
+    {"nombre": "Arroz basmati", "calorias": 352},
+    {"nombre": "Arroz blanco", "calorias": 350},
+    {"nombre": "Arroz blanco, al vapor", "calorias": 151},
+    {"nombre": "Arroz blanco, cocido/cocinado", "calorias": 130},
+    {"nombre": "Arroz chaufa", "calorias": 174},
+    {"nombre": "Arroz frito", "calorias": 125},
+    {"nombre": "Arroz integral", "calorias": 352},
+    {"nombre": "Arroz integral, cocido", "calorias": 126},
+    {"nombre": "Arroz rojo", "calorias": 312},
+    {"nombre": "Crema de arroz", "calorias": 382},
+    {"nombre": "Galletas de arroz", "calorias": 389},
+    {"nombre": "Paella mixta", "calorias": 368}
+  ]
+}

@@ -1,0 +1,53 @@
+# ── Android / Gradle ──────────────────────────────────────────────────────
+.gradle/
+build/
+local.properties
+captures/
+*.iml
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# ── IDEs ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.swp
+*.swo
+
+# ── PHP / Laravel (sin ancla: aplica a backend/ y a old/) ─────────────────
+vendor/
+node_modules/
+deploy/
+.env
+.env.*
+!.env.example
+auth.json
+.phpunit.result.cache
+.phpunit.cache/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/logs/
+storage/*.key
+public/build/
+public/hot/
+public/storage/
+
+# Datos personales de salud + hashes de contraseñas: nunca en git.
+# El fichero sigue en disco (old/database/database.sqlite) — haz una copia
+# fuera del proyecto antes de migrar a MySQL.
+*.sqlite
+*.sqlite-journal
+
+# ── Sistema ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+
+# ── Local de esta máquina ─────────────────────────────────────────────────
+.superpowers/
+no_subir_referencias/

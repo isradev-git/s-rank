@@ -1,0 +1,18 @@
+{
+  "yogur": [
+    {"nombre": "Activia (Danone)", "calorias": 74},
+    {"nombre": "Activia 0% (Danone)", "calorias": 41},
+    {"nombre": "Yogur bajo en grasa", "calorias": 45},
+    {"nombre": "Yogur de coco", "calorias": 125},
+    {"nombre": "Yogur desnatado", "calorias": 46},
+    {"nombre": "Yogur griego", "calorias": 116},
+    {"nombre": "Yogur griego ligero", "calorias": 80},
+    {"nombre": "Yogurt 0", "calorias": 35},
+    {"nombre": "Yogurt con cereales", "calorias": 89},
+    {"nombre": "Yogurt de fresa", "calorias": 45},
+    {"nombre": "Yogurt de vainilla", "calorias": 102},
+    {"nombre": "Yogurt griego sin azucar, natural", "calorias": 230},
+    {"nombre": "Yogurt natural", "calorias": 69},
+    {"nombre": "Yogurt protein", "calorias": 68}
+  ]
+}

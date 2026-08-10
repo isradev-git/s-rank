@@ -1,0 +1,19 @@
+{
+  "patatas": [
+    {"nombre": "Batata", "calorias": 116},
+    {"nombre": "Batatas, fritas", "calorias": 165},
+    {"nombre": "Boniato", "calorias": 116},
+    {"nombre": "Croquetas", "calorias": 180},
+    {"nombre": "Ensalada de patata", "calorias": 105},
+    {"nombre": "Papa, hervida", "calorias": 88},
+    {"nombre": "Papa, horneada", "calorias": 122},
+    {"nombre": "Papas fritas", "calorias": 312},
+    {"nombre": "Patata", "calorias": 75},
+    {"nombre": "Patata, asada", "calorias": 104},
+    {"nombre": "Patata, cocida", "calorias": 87},
+    {"nombre": "Patata, hervida", "calorias": 88},
+    {"nombre": "Patatas fritas caseras", "calorias": 221},
+    {"nombre": "Puré de papa", "calorias": 93},
+    {"nombre": "Ñoquis de papa", "calorias": 163}
+  ]
+}

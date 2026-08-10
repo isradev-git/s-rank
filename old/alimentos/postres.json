@@ -1,0 +1,14 @@
+{
+  "postres": [
+    {"nombre": "Arroz con leche", "calorias": 94},
+    {"nombre": "Budín de chocolate", "calorias": 95},
+    {"nombre": "Coba", "calorias": 53},
+    {"nombre": "Crema pastelera", "calorias": 95},
+    {"nombre": "Dulce de leche", "calorias": 315},
+    {"nombre": "Flan", "calorias": 204},
+    {"nombre": "Mousse de chocolate", "calorias": 347},
+    {"nombre": "Profiteroles", "calorias": 530},
+    {"nombre": "Pudín de pan", "calorias": 155},
+    {"nombre": "Quesillo", "calorias": 283}
+  ]
+}

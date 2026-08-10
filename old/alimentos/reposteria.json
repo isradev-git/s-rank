@@ -1,0 +1,20 @@
+{
+  "reposteria": [
+    {"nombre": "Cupcake", "calorias": 308},
+    {"nombre": "Duende", "calorias": 507},
+    {"nombre": "Factura con dulce de leche", "calorias": 135},
+    {"nombre": "Hot cakes", "calorias": 228},
+    {"nombre": "Magdalenas", "calorias": 222},
+    {"nombre": "Muffin de chocolate", "calorias": 297},
+    {"nombre": "Pie de manzana", "calorias": 265},
+    {"nombre": "Queque", "calorias": 320},
+    {"nombre": "Rosquilla", "calorias": 396},
+    {"nombre": "Strudel de manzana", "calorias": 170},
+    {"nombre": "Tarta de Santiago", "calorias": 610},
+    {"nombre": "Tarta de jamon y queso", "calorias": 270},
+    {"nombre": "Tarta de queso", "calorias": 216},
+    {"nombre": "Tarta tatin", "calorias": 170},
+    {"nombre": "Torta de chocolate", "calorias": 345},
+    {"nombre": "Torta frita", "calorias": 405}
+  ]
+}

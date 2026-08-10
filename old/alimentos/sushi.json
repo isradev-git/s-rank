@@ -1,0 +1,24 @@
+{
+  "sushi": [
+    {"nombre": "Inside Out Sushi", "calorias": 94},
+    {"nombre": "Jengibre encurtido", "calorias": 20},
+    {"nombre": "Maki de atún", "calorias": 140},
+    {"nombre": "Maki de pepino", "calorias": 93},
+    {"nombre": "Maki de salmón", "calorias": 163},
+    {"nombre": "Maki, Aguacate", "calorias": 163},
+    {"nombre": "Nigiri", "calorias": 165},
+    {"nombre": "Nigiri de salmón", "calorias": 181},
+    {"nombre": "Rollo californiano", "calorias": 94},
+    {"nombre": "Salsa de soja", "calorias": 122},
+    {"nombre": "Sashimi", "calorias": 188},
+    {"nombre": "Sashimi de salmón", "calorias": 159},
+    {"nombre": "Surimi", "calorias": 114},
+    {"nombre": "Sushi", "calorias": 306},
+    {"nombre": "Sushi Tempura", "calorias": 160},
+    {"nombre": "Sushi de aguacate", "calorias": 93},
+    {"nombre": "Sushi de atún", "calorias": 173},
+    {"nombre": "Sushi de salmón", "calorias": 158},
+    {"nombre": "Uramaki", "calorias": 187},
+    {"nombre": "Wasabi", "calorias": 137}
+  ]
+}

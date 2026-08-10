@@ -1,0 +1,31 @@
+{
+  "aceites_y_grasas": [
+    {"nombre": "Aceite", "calorias": 900},
+    {"nombre": "Aceite de aguacate", "calorias": 899},
+    {"nombre": "Aceite de argán", "calorias": 900},
+    {"nombre": "Aceite de canola", "calorias": 816},
+    {"nombre": "Aceite de coco", "calorias": 896},
+    {"nombre": "Aceite de cártamo", "calorias": 884},
+    {"nombre": "Aceite de girasol", "calorias": 900},
+    {"nombre": "Aceite de hígado de bacalao", "calorias": 898},
+    {"nombre": "Aceite de linaza", "calorias": 900},
+    {"nombre": "Aceite de oliva", "calorias": 901},
+    {"nombre": "Aceite de oliva virgen extra", "calorias": 900},
+    {"nombre": "Aceite de palma", "calorias": 900},
+    {"nombre": "Aceite de semilla de uva", "calorias": 900},
+    {"nombre": "Aceite de soja", "calorias": 900},
+    {"nombre": "Aceite vegetal, colza", "calorias": 900},
+    {"nombre": "Ajo en polvo", "calorias": 331},
+    {"nombre": "Ghee", "calorias": 892},
+    {"nombre": "Grasa alimentaria", "calorias": 884},
+    {"nombre": "Grasa de cerdo", "calorias": 900},
+    {"nombre": "Manteca", "calorias": 754},
+    {"nombre": "Manteca de cerdo", "calorias": 897},
+    {"nombre": "Manteca vegetal", "calorias": 884},
+    {"nombre": "Mantequilla clarificada", "calorias": 897},
+    {"nombre": "Mantequilla, light", "calorias": 389},
+    {"nombre": "Margarina", "calorias": 722},
+    {"nombre": "Mayonesa casera", "calorias": 680},
+    {"nombre": "Palta hass", "calorias": 140}
+  ]
+}

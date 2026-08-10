@@ -1,0 +1,26 @@
+{
+  "cereales": [
+    {"nombre": "Arroz inflado", "calorias": 375},
+    {"nombre": "Avena en hojuelas", "calorias": 409},
+    {"nombre": "Avena instantánea", "calorias": 362},
+    {"nombre": "Avena integral", "calorias": 361},
+    {"nombre": "Avenas", "calorias": 361},
+    {"nombre": "Cereales Special K (Kellogg's)", "calorias": 385},
+    {"nombre": "Cereales", "calorias": 363},
+    {"nombre": "Cheerios (Nestlé)", "calorias": 379},
+    {"nombre": "Choco Krispies", "calorias": 384},
+    {"nombre": "Chocos (Kellogg's)", "calorias": 369},
+    {"nombre": "Cookie Crisp (Nestlé)", "calorias": 388},
+    {"nombre": "Corn Flakes", "calorias": 363},
+    {"nombre": "Corn pops", "calorias": 387},
+    {"nombre": "Froot Loops (Kellogg's)", "calorias": 384},
+    {"nombre": "Golden grahams", "calorias": 376},
+    {"nombre": "Muesli", "calorias": 363},
+    {"nombre": "Rice Krispies (Kellogg's)", "calorias": 383},
+    {"nombre": "Special K (Kellogg's)", "calorias": 385},
+    {"nombre": "Special K Chocolate", "calorias": 405},
+    {"nombre": "Trigo inflado", "calorias": 366},
+    {"nombre": "Trix (General Mills)", "calorias": 384},
+    {"nombre": "Weetabix", "calorias": 371}
+  ]
+}

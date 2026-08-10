@@ -1,0 +1,15 @@
+{
+  "cafe": [
+    {"nombre": "Cafe con leche", "calorias": 30},
+    {"nombre": "Cafe solo", "calorias": 32},
+    {"nombre": "Cafe", "calorias": 2},
+    {"nombre": "Café con azúcar", "calorias": 10},
+    {"nombre": "Café con leche descremada", "calorias": 8},
+    {"nombre": "Café descafeinado", "calorias": 2},
+    {"nombre": "Café instantáneo", "calorias": 362},
+    {"nombre": "Capuchino", "calorias": 34},
+    {"nombre": "Frappé", "calorias": 92},
+    {"nombre": "Latte Macchiato", "calorias": 44},
+    {"nombre": "Nescafe classic", "calorias": 118}
+  ]
+}

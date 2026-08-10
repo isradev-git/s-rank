@@ -1,0 +1,20 @@
+{
+  "snacks": [
+    {"nombre": "Chips de camote", "calorias": 529},
+    {"nombre": "Chips de tortilla", "calorias": 309},
+    {"nombre": "Chips de verduras", "calorias": 512},
+    {"nombre": "Doritos", "calorias": 519},
+    {"nombre": "Galletas de arroz", "calorias": 389},
+    {"nombre": "Galletas de soda", "calorias": 479},
+    {"nombre": "Garbanzos, tostados", "calorias": 464},
+    {"nombre": "Grande onda (Cheetos)", "calorias": 476},
+    {"nombre": "Mani salado", "calorias": 619},
+    {"nombre": "Mani, tostado", "calorias": 637},
+    {"nombre": "Nachos", "calorias": 482},
+    {"nombre": "Nachos con queso", "calorias": 343},
+    {"nombre": "Palomitas de caramelo", "calorias": 369},
+    {"nombre": "Palomitas de maiz", "calorias": 442},
+    {"nombre": "Palomitas microondas", "calorias": 385},
+    {"nombre": "Patatas, fritas", "calorias": 566}
+  ]
+}

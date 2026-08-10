@@ -1,0 +1,25 @@
+{
+  "pasta": [
+    {"nombre": "Espaguetis integrales", "calorias": 342},
+    {"nombre": "Espiral", "calorias": 369},
+    {"nombre": "Fideos", "calorias": 353},
+    {"nombre": "Fideos", "calorias": 353},
+    {"nombre": "Fideos de huevo", "calorias": 384},
+    {"nombre": "Fideos de soja", "calorias": 350},
+    {"nombre": "Fideos shirataki", "calorias": 9},
+    {"nombre": "Fideos shirataki", "calorias": 9},
+    {"nombre": "Fusilli", "calorias": 354},
+    {"nombre": "Macarrones", "calorias": 359},
+    {"nombre": "Orecchiette", "calorias": 273},
+    {"nombre": "Orzo", "calorias": 362},
+    {"nombre": "Pastas", "calorias": 365},
+    {"nombre": "Penne", "calorias": 359},
+    {"nombre": "Penne rigate", "calorias": 352},
+    {"nombre": "Pierogi", "calorias": 167},
+    {"nombre": "Rigatoni", "calorias": 353},
+    {"nombre": "Spaguetti", "calorias": 353},
+    {"nombre": "Tagliatelle", "calorias": 346},
+    {"nombre": "Tallarines blancos", "calorias": 360},
+    {"nombre": "Tortellini", "calorias": 273}
+  ]
+}

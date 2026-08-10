@@ -1,0 +1,30 @@
+{
+  "cerveza": [
+    {"nombre": "Alhambra 1925", "calorias": 56},
+    {"nombre": "Bitter Kas", "calorias": 19},
+    {"nombre": "Brahma Chopp", "calorias": 45},
+    {"nombre": "Brahma, cerveja duplo malte", "calorias": 41},
+    {"nombre": "Carlsberg", "calorias": 40},
+    {"nombre": "Cerveza", "calorias": 42},
+    {"nombre": "Cerveza de raíz", "calorias": 41},
+    {"nombre": "Cerveza de trigo", "calorias": 38},
+    {"nombre": "Cerveza sin alcohol", "calorias": 25},
+    {"nombre": "Desperados", "calorias": 59},
+    {"nombre": "Dos Equis", "calorias": 40},
+    {"nombre": "Estrella Galicia", "calorias": 47},
+    {"nombre": "Grimbergen blonde", "calorias": 51},
+    {"nombre": "Guinness", "calorias": 30},
+    {"nombre": "Heineken", "calorias": 42},
+    {"nombre": "Kölsch", "calorias": 53},
+    {"nombre": "Lager", "calorias": 42},
+    {"nombre": "Mahou", "calorias": 42},
+    {"nombre": "Mahou 5 estrellas", "calorias": 49},
+    {"nombre": "Pacifico", "calorias": 41},
+    {"nombre": "Paulaner", "calorias": 42},
+    {"nombre": "Pilsen", "calorias": 42},
+    {"nombre": "San Miguel", "calorias": 45},
+    {"nombre": "Shandy", "calorias": 32},
+    {"nombre": "Tecate", "calorias": 40},
+    {"nombre": "Tecate Light", "calorias": 31}
+  ]
+}

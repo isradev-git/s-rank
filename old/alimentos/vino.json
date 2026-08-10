@@ -1,0 +1,20 @@
+{
+  "vino": [
+    {"nombre": "Cabernet sauvignon", "calorias": 83},
+    {"nombre": "Chardonnay", "calorias": 84},
+    {"nombre": "Copa de vino tinto", "calorias": 74},
+    {"nombre": "Merlot", "calorias": 83},
+    {"nombre": "Prosecco", "calorias": 83},
+    {"nombre": "Riesling", "calorias": 80},
+    {"nombre": "Sauvignon blanc", "calorias": 81},
+    {"nombre": "Sherry", "calorias": 118},
+    {"nombre": "Sidra", "calorias": 47},
+    {"nombre": "Tinto de verano", "calorias": 37},
+    {"nombre": "Vino", "calorias": 74},
+    {"nombre": "Vino blanco", "calorias": 74},
+    {"nombre": "Vino blanco dulce", "calorias": 98},
+    {"nombre": "Vino dulce", "calorias": 151},
+    {"nombre": "Vino rosado", "calorias": 89},
+    {"nombre": "Vino sin alcohol", "calorias": 15}
+  ]
+}

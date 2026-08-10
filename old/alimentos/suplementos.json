@@ -1,0 +1,21 @@
+{
+  "suplementos": [
+    {"nombre": "BCAA", "calorias": 400},
+    {"nombre": "Barrita de proteínas", "calorias": 382},
+    {"nombre": "Batido de proteina", "calorias": 60},
+    {"nombre": "Booster, Vainilla", "calorias": 500},
+    {"nombre": "Caseína", "calorias": 333},
+    {"nombre": "Colágeno", "calorias": 357},
+    {"nombre": "Creatina", "calorias": 100},
+    {"nombre": "EAA, Vainilla", "calorias": 365},
+    {"nombre": "Ganador de peso", "calorias": 367},
+    {"nombre": "Impact Whey Protein (MyProtein)", "calorias": 409},
+    {"nombre": "Mass Gainer", "calorias": 379},
+    {"nombre": "Omega 3", "calorias": 687},
+    {"nombre": "Proteina", "calorias": 352},
+    {"nombre": "Proteina en polvo", "calorias": 401},
+    {"nombre": "Proteína vegana", "calorias": 402},
+    {"nombre": "Whey Protein Gold Standard", "calorias": 377},
+    {"nombre": "Whey protein", "calorias": 401}
+  ]
+}

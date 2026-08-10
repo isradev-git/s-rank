@@ -1,0 +1,74 @@
+:root {
+  /* ─── Backgrounds ─────────────────────────────────── */
+  --bg-background: #0a0a0b;
+  --bg-surface:    #111113;
+  --bg-card:       #18181b;
+  --bg-card-hover: #1f1f23;
+  --bg-muted:      #27272a;
+  --bg-input:      #1c1c1f;
+
+  /* ─── Text ────────────────────────────────────────── */
+  --text-primary:     #fafafa;
+  --text-secondary:   #d4d4d8;
+  --text-muted:       #71717a;
+  --text-placeholder: #52525b;
+
+  /* ─── Borders ─────────────────────────────────────── */
+  --border-color:  #27272a;
+  --border-light:  rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.10);
+
+  /* ─── Brand – FitLoop Amber ───────────────────────── */
+  --color-primary:            #f59e0b;
+  --color-primary-light:      #fcd34d;
+  --color-primary-dim:        #d97706;
+  --color-primary-foreground: #000000;
+  --color-primary-glow:       rgba(245, 158, 11, 0.22);
+  --color-primary-subtle:     rgba(245, 158, 11, 0.08);
+
+  /* ─── Semantic Colors ─────────────────────────────── */
+  --color-danger:          #ef4444;
+  --color-danger-subtle:   rgba(239, 68, 68, 0.10);
+  --color-success:         #22c55e;
+  --color-success-subtle:  rgba(34, 197, 94, 0.10);
+  --color-warning:         #eab308;
+  --color-warning-subtle:  rgba(234, 179, 8, 0.10);
+  --color-blue:            #3b82f6;
+  --color-blue-subtle:     rgba(59, 130, 246, 0.10);
+  --color-purple:          #a855f7;
+  --color-purple-subtle:   rgba(168, 85, 247, 0.10);
+  --color-teal:            #14b8a6;
+  --color-teal-subtle:     rgba(20, 184, 166, 0.10);
+
+  /* ─── Spacing ─────────────────────────────────────── */
+  --spacing-xs:  0.25rem;
+  --spacing-sm:  0.5rem;
+  --spacing-md:  1rem;
+  --spacing-lg:  1.5rem;
+  --spacing-xl:  2rem;
+
+  /* ─── Border Radius ───────────────────────────────── */
+  --radius-sm:   0.5rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1rem;
+  --radius-xl:   1.25rem;
+  --radius-2xl:  1.5rem;
+  --radius-full: 9999px;
+
+  /* ─── Shadows ─────────────────────────────────────── */
+  --shadow-xs:        0 1px 2px rgba(0,0,0,0.35);
+  --shadow-sm:        0 2px 6px rgba(0,0,0,0.45);
+  --shadow-md:        0 4px 14px rgba(0,0,0,0.5);
+  --shadow-lg:        0 8px 28px rgba(0,0,0,0.55);
+  --shadow-xl:        0 20px 48px rgba(0,0,0,0.65);
+  --shadow-primary:   0 4px 20px var(--color-primary-glow);
+  --shadow-primary-lg:0 8px 36px var(--color-primary-glow);
+
+  /* ─── Transitions ─────────────────────────────────── */
+  --transition-fast: 100ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 320ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ─── Layout ──────────────────────────────────────── */
+  --navbar-height: 4rem;
+}

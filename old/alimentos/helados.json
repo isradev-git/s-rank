@@ -1,0 +1,31 @@
+{
+  "helados": [
+    {"nombre": "Batido de chocolate", "calorias": 135},
+    {"nombre": "Calippo cola", "calorias": 89},
+    {"nombre": "Cornetto (Frigo)", "calorias": 138},
+    {"nombre": "Cucurucho de helado", "calorias": 262},
+    {"nombre": "Gelatina, light", "calorias": 6},
+    {"nombre": "Helado de chocolate", "calorias": 179},
+    {"nombre": "Helado de coco", "calorias": 170},
+    {"nombre": "Helado de dulce de leche", "calorias": 211},
+    {"nombre": "Helado de fresa", "calorias": 88},
+    {"nombre": "Helado de limon", "calorias": 218},
+    {"nombre": "Helado de vainilla", "calorias": 188},
+    {"nombre": "Helado suave", "calorias": 128},
+    {"nombre": "Luna azul", "calorias": 203},
+    {"nombre": "Magnum (Frigo)", "calorias": 234},
+    {"nombre": "Magnum Almond (Frigo)", "calorias": 248},
+    {"nombre": "Magnum Double Caramel", "calorias": 338},
+    {"nombre": "Magnum Double Chocolate", "calorias": 359},
+    {"nombre": "Magnum Gold (Frigo)", "calorias": 325},
+    {"nombre": "Magnum blanco (Frigo)", "calorias": 282},
+    {"nombre": "Maxibon", "calorias": 326},
+    {"nombre": "McFlurry (McDonald's)", "calorias": 248},
+    {"nombre": "McFlurry Oreo (McDonald's)", "calorias": 215},
+    {"nombre": "Pirulo", "calorias": 67},
+    {"nombre": "Solero (Frigo)", "calorias": 290},
+    {"nombre": "Sundae caramelo (McDonald's)", "calorias": 286},
+    {"nombre": "Sándwich de helado", "calorias": 267},
+    {"nombre": "Twister", "calorias": 100}
+  ]
+}

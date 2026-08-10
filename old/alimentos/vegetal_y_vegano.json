@@ -1,0 +1,15 @@
+{
+  "vegetal_y_alternativas": [
+    {"nombre": "Almond breeze", "calorias": 16},
+    {"nombre": "Bebida de soja", "calorias": 29},
+    {"nombre": "Leche con avena", "calorias": 40},
+    {"nombre": "Leche de almendras", "calorias": 22},
+    {"nombre": "Leche de arroz", "calorias": 53},
+    {"nombre": "Leche de avena", "calorias": 40},
+    {"nombre": "Leche de soja", "calorias": 36},
+    {"nombre": "Soja texturizada", "calorias": 332},
+    {"nombre": "Tempúín", "calorias": 167},
+    {"nombre": "Tofu", "calorias": 127},
+    {"nombre": "Tofu, frito", "calorias": 270}
+  ]
+}

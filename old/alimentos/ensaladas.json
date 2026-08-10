@@ -1,0 +1,21 @@
+{
+  "ensaladas": [
+    {"nombre": "Coleslaw", "calorias": 53},
+    {"nombre": "Ensalada césar", "calorias": 187},
+    {"nombre": "Ensalada de ave", "calorias": 63},
+    {"nombre": "Ensalada de lechuga", "calorias": 14},
+    {"nombre": "Ensalada de lechuga tomate y cebolla", "calorias": 71},
+    {"nombre": "Ensalada de pepino", "calorias": 55},
+    {"nombre": "Ensalada de tomate y cebolla", "calorias": 71},
+    {"nombre": "Ensalada de tomate y lechuga", "calorias": 63},
+    {"nombre": "Ensalada de verduras", "calorias": 14},
+    {"nombre": "Ensalada mixta", "calorias": 14},
+    {"nombre": "Ensalada valeriana", "calorias": 18},
+    {"nombre": "Escarola", "calorias": 18},
+    {"nombre": "Lechuga escarola", "calorias": 18},
+    {"nombre": "Lechuga iceberg", "calorias": 15},
+    {"nombre": "Lechuga romana", "calorias": 18},
+    {"nombre": "Lechuga", "calorias": 14},
+    {"nombre": "Rúcula", "calorias": 30}
+  ]
+}
