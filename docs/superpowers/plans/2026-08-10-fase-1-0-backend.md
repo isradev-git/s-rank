@@ -1058,6 +1058,22 @@ class UserProgress extends Model
         'current_streak', 'longest_streak', 'last_active_date',
     ];
 
+    /**
+     * Los mismos valores por defecto que la migración, pero también en memoria: sin
+     * esto, una fila recién creada con firstOrCreate() devuelve null en cada columna
+     * hasta que se relee, y el Sistema hace cuentas con ella en el acto.
+     */
+    protected $attributes = [
+        'level'           => 1,
+        'xp_total'        => 0,
+        'strength_acc'    => 0,
+        'endurance_acc'   => 0,
+        'consistency_acc' => 0,
+        'vitality_acc'    => 0,
+        'current_streak'  => 0,
+        'longest_streak'  => 0,
+    ];
+
     protected $casts = [
         'level'            => 'integer',
         'xp_total'         => 'integer',
