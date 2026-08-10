@@ -12,7 +12,9 @@ if [[ ! -f .env.produccion ]]; then
 ERROR: falta .env.produccion.
 
 Copia .env.produccion.example a .env.produccion y rellena:
-  - APP_KEY        (php artisan key:generate --show)
+  - APP_KEY        LA MISMA que ya está en el servidor. Solo se genera de cero
+                   (php artisan key:generate --show) en la primera instalación:
+                   cambiarla después invalida las sesiones y cualquier dato cifrado.
   - DB_*           credenciales de MySQL de Ginernet
   - MAIL_*         SMTP para la recuperación de contraseña
 
