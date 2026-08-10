@@ -1,98 +1,87 @@
 # Despliegue de la fase 1.0 a Ginernet
 
-Estado: **pendiente de los pasos manuales**. Todo lo automatizable está hecho; lo que
-queda necesita el panel de Ginernet y FileZilla.
+**Hecho el 10 de agosto de 2026.** La API está en producción y verificada de punta a punta.
 
-## Lo que ya está listo en local
+    https://s-rank.israelzamora.es
 
-| Cosa | Dónde | Estado |
-|---|---|---|
-| Volcado inicial de MySQL (esquema + datos reales) | `srank-inicial.sql`, 344 KB, 26 tablas | hecho |
-| Paquete FTP | `backend/deploy/` | lo genera `bash build-deploy.sh` |
-| `.env` de producción | `backend/.env.produccion` (fuera de git) | **APP_KEY puesta; `DB_*` y `MAIL_*` vacíos** |
+## Lo que hay montado
 
-El volcado se regenera cuando haga falta con:
+| | |
+|---|---|
+| Subdominio | `s-rank.israelzamora.es` → `public_html/s-rank.israelzamora.es/`, con SSL |
+| Base de datos | `israelza_srank`, usuario `israelza_glitchbane` (la contraseña solo en `.env`) |
+| Correo saliente | `soc@israelzamora.es` por `mail.israelzamora.es:465` |
+| Servidor | LiteSpeed, PHP con el Document Root en `public/` |
+
+El volcado inicial se generó con:
 
 ```bash
 cd backend
-mysqldump -u srank -psrank_local --no-tablespaces srank > srank-inicial.sql
+mysqldump -u srank -psrank_local --no-tablespaces srank > ../srank-inicial.sql
 ```
 
-## Lo que falta, en orden
+Ese fichero vive en la raíz del proyecto y **no** dentro de `backend/`: desde ahí lo
+copiaría `build-deploy.sh` a `deploy/`, y `deploy/` se sube a una carpeta que sirve por
+web. `*.sql` está en el `.gitignore` y el script aborta si alguno se cuela.
 
-### 1 · Panel de Ginernet
+## Verificado contra el servidor
 
-- Subdominio `rank-s.israelzamora.es` → `public_html/rank-s.israelzamora.es`.
-  Si el panel deja fijar el Document Root, ponerlo en la subcarpeta `public/`. Si no, el
-  `.htaccess` de la raíz ya reescribe en un salto y reinyecta la cabecera `Authorization`,
-  que es lo que necesita Sanctum para leer el token.
-- Base de datos MySQL nueva + usuario con todos los permisos sobre ella.
-- Certificado SSL (Let's Encrypt desde el panel).
+- Login y registro emiten token.
+- `GET /api/system/today` genera las misiones del día al vuelo, en castellano.
+- `POST /api/water` devuelve el bloque `system`: XP, misión completada, logro desbloqueado
+  y progreso actualizado en la misma respuesta.
+- `GET /api/system/profile` y `/achievements`: cuatro estadísticas, 40 logros, 10/12/10/8
+  por rareza.
+- Recuperación de contraseña: el código de seis cifras llega al buzón, cambia la
+  contraseña, **cierra todas las sesiones abiertas** y no se puede reutilizar.
+- Las 16 tablas de producción tienen exactamente las mismas filas que en local.
 
-### 2 · Rellenar `backend/.env.produccion`
+## Los cuatro fallos que solo aparecieron aquí
 
-Faltan por poner:
+Ninguno lo cazaron los tests, y por el mismo motivo: la suite corre sobre SQLite y sin red.
 
-- `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` — los del paso anterior.
-- `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` — una cuenta de correo del dominio.
-  **Sin esto la recuperación de contraseña no funciona**: el código de seis cifras se
-  genera y se guarda, pero nunca sale del servidor.
+**1 · Sanctum no admitía UUID.** `personal_access_tokens.tokenable_id` lo crea `morphs()`
+como `bigint`, pero los usuarios tienen UUID. MySQL truncaba y `createToken()` reventaba:
+**nadie podía iniciar sesión**. SQLite no tipa las columnas y se lo tragaba.
+→ migración `2026_08_10_000005`, y `UuidSchemaTest` vigila las 14 columnas que apuntan a
+un usuario.
 
-`APP_KEY` ya está puesta y **no es la que se filtró**: esa se descartó.
+**2 · Un 401 salía como 500.** Sin cabecera `Accept: application/json`, el middleware de
+autenticación intentaba redirigir a la ruta `login`, que en una API no existe, y reventaba
+antes de que el manejador de excepciones pudiera intervenir.
+→ `redirectGuestsTo(null)` en `bootstrap/app.php`, más `ApiAlwaysJsonTest`.
 
-### 3 · Subir la base de datos
+**3 · `forgot-password` delataba qué correos tienen cuenta.** Prometía responder lo mismo
+existiera o no la cuenta, pero si el envío fallaba la excepción salía como 500: correo
+desconocido 200, correo registrado 500.
+→ el fallo de envío se registra y la respuesta no cambia.
 
-Importar `srank-inicial.sql` por phpMyAdmin del panel.
+**4 · `MAIL_SCHEME=ssl` no existe.** Symfony Mailer solo acepta `smtp` y `smtps`. Ni `tls`
+ni `ssl`. No falla al arrancar: falla la primera vez que se manda un correo.
+→ 587 es `smtp`, 465 es `smtps`. `MailSchemeTest` valida el `.env` antes de empaquetar.
 
-### 4 · Subir el código
+## Cosas a las que estar atento
 
-```bash
-cd backend && bash build-deploy.sh
+**`[2002] No such file or directory` al conectar a MySQL.** Apareció una vez el 10 de
+agosto a las 12:25 y no volvió. Es el socket Unix rechazando la conexión un instante. Si
+se repite, cambiar `DB_HOST=localhost` por `DB_HOST=127.0.0.1`: fuerza TCP y se lo salta.
+
+**Los mensajes de validación salen en inglés.** Laravel 12 no trae traducciones al
+español. Se resuelve en la fase 1.1 publicando `lang/es`.
+
+## Pendiente de limpiar
+
+Dos cuentas creadas para probar:
+
+```sql
+DELETE FROM users WHERE email IN ('prueba-despliegue@israelzamora.es');
 ```
 
-Arrastrar **todo el contenido** de `backend/deploy/` a
-`public_html/rank-s.israelzamora.es/` con FileZilla. Después, desde el gestor de archivos
-del panel:
+Y `hola@israelzamora.es` tiene una contraseña temporal que se escribió en una
+conversación: **cámbiala**.
 
-```
-chmod -R 775 storage bootstrap/cache public/uploads
-```
-
-### 5 · Comprobar
-
-```bash
-curl -i https://rank-s.israelzamora.es/api/system/today
-```
-
-- `401` con cuerpo JSON → bien.
-- `500` → permisos de `storage/` o `.env` mal puesto.
-- `404` → el Document Root no apunta donde debe.
-
-Luego, con un usuario real:
-
-```bash
-curl -s -X POST https://rank-s.israelzamora.es/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"TU_CORREO","password":"TU_CONTRASEÑA"}'
-
-curl -s https://rank-s.israelzamora.es/api/system/today -H 'Authorization: Bearer TOKEN'
-```
-
-Y que el correo sale:
-
-```bash
-curl -s -X POST https://rank-s.israelzamora.es/api/auth/forgot-password \
-  -H 'Content-Type: application/json' -d '{"email":"TU_CORREO"}'
-```
-
-### 6 · Al terminar
-
-Volver a este fichero y apuntar: fecha, nombre de la base de datos, usuario de MySQL
-(**sin la contraseña**), cuenta de correo del SMTP y cualquier cosa que hubiera que tocar
-en el panel.
-
-## Recordatorio pendiente
+## Recordatorio
 
 `old/database/database.sqlite` y `old/database/database.2026-05-backup.sqlite` son la
-**única copia** de los datos reales de FitLoop y no están en git. Hay que respaldarlos
+**única copia** de los datos originales de FitLoop y no están en git. Hay que respaldarlos
 fuera del proyecto antes de borrar `old/` al cerrar la fase 1.
