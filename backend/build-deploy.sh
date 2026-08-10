@@ -37,6 +37,7 @@ rsync -a \
   --exclude='*.md' \
   --exclude='/database/*.sqlite' \
   --exclude='/database/*.sqlite-journal' \
+  --exclude='*.sql' \
   ./ deploy/
 
 # .env de producción -> .env  (MySQL de Ginernet, APP_DEBUG=false)
@@ -48,9 +49,16 @@ find deploy/storage/framework/sessions \
      deploy/storage/framework/views -type f ! -name '.gitignore' -delete 2>/dev/null || true
 rm -f deploy/storage/logs/*.log 2>/dev/null || true
 
-# Red de seguridad: si algún día vuelve a colarse una base de datos, que falle aquí
-if find deploy -name '*.sqlite' | grep -q .; then
+# Red de seguridad: si algún día vuelve a colarse una base de datos, que falle aquí.
+# Un .sql cuenta igual: el volcado lleva dentro los hashes y los datos de salud, y
+# esto se sube a una carpeta que sirve por web.
+# vendor/ queda fuera: trae un .sql de Laravel Sail de 108 bytes que no es nuestro
+# y haría saltar la alarma en cada build.
+colados=$(find deploy -path deploy/vendor -prune -o \( -name '*.sqlite' -o -name '*.sql' \) -print)
+
+if [[ -n "$colados" ]]; then
   echo "ERROR: se ha colado una base de datos en deploy/. Abortando." >&2
+  echo "$colados" >&2
   exit 1
 fi
 

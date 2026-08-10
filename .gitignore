@@ -44,6 +44,9 @@ public/storage/
 *.sqlite
 *.sqlite-journal
 
+# Los volcados de MySQL llevan lo mismo dentro: datos de salud y hashes.
+*.sql
+
 # ── Sistema ───────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
