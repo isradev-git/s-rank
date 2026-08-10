@@ -270,14 +270,19 @@ class AchievementService
      * Días con cualquier tipo de actividad, en orden ascendente. Es la definición de
      * «día activo» que usan la racha del Sistema y todos los logros de racha.
      *
+     * Los pasos SÍ cuentan aquí, aunque no sean entrenamiento y no den XP de entreno:
+     * apuntar los pasos es actividad. Hay quien usa la app solo para eso, y dejarle la
+     * racha a cero para siempre sería absurdo. Lo que no cuentan es como entreno, y de
+     * eso se encarga la consulta de `$workouts`, que sí los filtra.
+     *
      * @return string[] fechas 'Y-m-d'
      */
-    private function activeDates(User $user): array
+    public function activeDates(User $user): array
     {
         $id = $user->id;
 
         $sets = [
-            DB::table('workouts')->where('user_id', $id)->where('mode', '!=', 'pasos')->pluck('date'),
+            DB::table('workouts')->where('user_id', $id)->pluck('date'),
             DB::table('meal_logs')->where('user_id', $id)->pluck('date'),
             DB::table('water_logs')->where('user_id', $id)->pluck('date'),
             DB::table('supplement_logs')->where('user_id', $id)->where('taken', true)->pluck('date'),

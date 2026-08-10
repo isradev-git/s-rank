@@ -4271,5 +4271,28 @@ Y dos limitaciones que amplían la ya documentada en el spec §10:
 - **Vitalidad arranca en cero para todos.** Se alimenta de misiones de hábito cumplidas, y
   las misiones no existían antes de hoy. Sube desde el primer día de uso.
 - **La racha del Sistema es de días activos, no de días entrenados.** Cuenta cualquier
-  registro: entreno, comida, agua, suplemento o peso. Los logros de racha usan esa misma
-  definición, para que no haya dos rachas distintas conviviendo.
+  registro: entreno, pasos, comida, agua, suplemento o peso. Los logros de racha y el
+  recálculo histórico usan esa misma definición, para que no haya dos rachas distintas
+  conviviendo. Apuntar los pasos mantiene la racha viva aunque no dé XP de entreno ni
+  cuente para los logros de entrenamiento: hay quien usa la app solo para eso.
+
+## Correcciones aplicadas durante la ejecución
+
+**Los listeners no se registran a mano.** El paso 6 de la tarea 11 mandaba registrarlos en
+`AppServiceProvider::boot()`. Laravel 11+ ya autodescubre los métodos `handle*` de
+`app/Listeners` por el tipo de su primer parámetro, incluidos los tipos unión, así que el
+registro manual disparaba **cada evento dos veces**: dos filas de XP por entreno y el doble
+de minutos en Resistencia. `boot()` se queda vacío con un comentario que lo explica.
+
+**El recálculo recorre días activos, no entrenos.** La tarea 14 iteraba solo sobre
+`workouts`, de modo que quien lleva la app a base de agua y comidas —que resultó ser la
+usuaria principal— salía del recálculo con la racha a cero. Ahora recorre los mismos días
+activos que el Sistema en vivo, y `AchievementService::activeDates()` es público para no
+tener dos definiciones de «día activo». El bonus de racha se paga al final del día, como
+en vivo, para que sea lo primero que se recorta al llegar al tope de 300.
+
+**Los datos reales no eran 18 entrenos.** De los 18 registros de `workouts`, 15 son de modo
+`pasos`. Solo hay 3 entrenamientos de verdad, dos de ellos de 1 y 3 minutos. Por eso el
+recálculo no imprime el aviso de «entrenos sin detalle de series» que el plan esperaba: los
+tres que quedan sí tienen series con peso. Resultado real: Slavka 314 XP / nivel 3 con 32
+días activos, Isra 170 XP / nivel 2 con 6.
