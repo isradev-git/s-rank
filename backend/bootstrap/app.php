@@ -13,8 +13,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['fitloop_token']);
-
         // Sin esto, Laravel redirige al invitado a la ruta «login», que aquí no existe:
         // el middleware revienta con RouteNotFoundException antes de que el manejador de
         // excepciones pueda intervenir, y un 401 legítimo sale como 500. Devolviendo null

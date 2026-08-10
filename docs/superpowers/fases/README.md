@@ -41,9 +41,13 @@ diseñada. Hay usuarios que no saben lo que es una terminal.
 
 **2 · El Sistema no sabe de dominio y los módulos no saben del Sistema.** Los módulos
 publican eventos; el Sistema decide qué hacer con ellos. Añadir un módulo en la fase 2
-debe ser publicar eventos nuevos, no tocar el núcleo. Esta separación ya existe en el
-backend (`backend/app/System/` y `backend/app/Events/`) y hay que repetirla en Android
-(`core/system/` y `feature/*`).
+debe ser publicar eventos nuevos, no tocar el núcleo.
+
+En el backend solo se cumple la mitad: los controladores publican eventos y no mencionan
+al Sistema, pero el Sistema sí consulta modelos de dominio (`QuestService`). Se queda
+así a propósito. En Android la separación que se busca es la de módulos de Gradle:
+**`core/system` no declara `feature/*`**, y eso lo verifica el compilador solo. El detalle
+está en `CLAUDE.md`.
 
 **3 · Todo el XP se calcula en el servidor.** La app nunca decide cuánto XP vale algo:
 lo pinta. El cliente enseña lo que el bloque `system` de la respuesta le diga.

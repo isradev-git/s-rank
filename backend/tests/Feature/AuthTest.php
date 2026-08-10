@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -36,8 +37,9 @@ class AuthTest extends TestCase
                 'is_admin'   => false,
             ]);
 
-        // La cookie fitloop_token debe estar presente
-        $this->assertNotNull($response->headers->getCookies());
+        // El token va en el cuerpo y nada más: ninguna cookie lo acompaña. La llevaba
+        // FitLoop para su web en Blade, sin cifrar y sin Secure, y ya no hace falta.
+        $this->assertSame([], $response->headers->getCookies());
     }
 
     public function test_login_admin_retorna_is_admin_true()
@@ -61,6 +63,26 @@ class AuthTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
+    }
+
+    /**
+     * Un correo que no existe tiene que costar lo mismo que uno que sí. Si el login se
+     * salta bcrypt cuando no encuentra al usuario, la respuesta vuelve muchísimo antes
+     * y el tiempo delata qué cuentas hay dadas de alta.
+     *
+     * Se comprueba que se llama a Hash::check y no que el reloj marque lo mismo: medir
+     * milisegundos en un test lo vuelve inestable sin demostrar nada más.
+     */
+    public function test_login_con_email_inexistente_tambien_comprueba_un_hash()
+    {
+        Hash::spy();
+
+        $this->postJson('/api/auth/login', [
+            'email'    => 'noexiste@example.com',
+            'password' => 'password',
+        ])->assertStatus(422);
+
+        Hash::shouldHaveReceived('check')->once();
     }
 
     public function test_login_con_password_incorrecta_retorna_422()

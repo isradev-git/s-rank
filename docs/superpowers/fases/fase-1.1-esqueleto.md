@@ -154,11 +154,21 @@ las misiones de hoy aparecerán como las de ayer a partir de medianoche.
 - [ ] Los ViewModel tienen tests.
 - [ ] Se ve bien con el tamaño de fuente del sistema al máximo.
 
-## Tarea suelta que arrastra la fase 1.0
+## Lo que se limpió antes de empezar
 
-Publicar `lang/es` en el backend, para que los errores de validación dejen de salir en
-inglés. Es `php artisan lang:publish` y traducir `validation.php`. Sin esto, un registro
-con el correo repetido responde *«The email has already been taken»*.
+La fase 1.1 arranca sobre un backend ya repasado. Cuatro cosas cambiaron y afectan a lo
+que la app se encuentra:
+
+- **Los errores de validación llegan en español.** `backend/lang/es/validation.php`, con
+  los nombres de campo traducidos: «el correo ya está en uso», no *«The email has already
+  been taken»*. Empiezan en minúscula porque van debajo de un campo; si en pantalla queda
+  mal, se capitaliza al pintarlos en el cliente.
+- **El login ya no devuelve cookie.** Solo `access_token` en el cuerpo. La cookie
+  `fitloop_token` era de la web de FitLoop, viajaba sin cifrar y sin `Secure`.
+- **No hay rutas web.** `/informe-salud` estaba caído (500) y se retiró; la lógica sigue
+  en `ReportController`, sin ruta, esperando a la fase 1.5.
+- **Entrar con un correo que no existe tarda lo mismo que con uno que sí.** Antes no, y
+  ese tiempo decía qué cuentas hay dadas de alta.
 
 ## Prompt para arrancar el chat
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Genera ./deploy con TODO lo que se sube por FTP a Ginernet.
-# El subdominio rank-s.israelzamora.es apunta a public_html/rank-s.israelzamora.es/
+# El subdominio s-rank.israelzamora.es apunta a public_html/s-rank.israelzamora.es/
 # y ahí va el contenido COMPLETO de ./deploy/.
 #
 # Uso:  bash build-deploy.sh
@@ -63,5 +63,5 @@ if [[ -n "$colados" ]]; then
 fi
 
 echo "OK -> ./deploy listo."
-echo "Sube TODO el contenido de ./deploy/ a public_html/rank-s.israelzamora.es/"
+echo "Sube TODO el contenido de ./deploy/ a public_html/s-rank.israelzamora.es/"
 echo "Tras subir: chmod -R 775 storage bootstrap/cache public/uploads"

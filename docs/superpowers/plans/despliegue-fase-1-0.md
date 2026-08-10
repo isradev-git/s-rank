@@ -66,19 +66,22 @@ ni `ssl`. No falla al arrancar: falla la primera vez que se manda un correo.
 agosto a las 12:25 y no volvió. Es el socket Unix rechazando la conexión un instante. Si
 se repite, cambiar `DB_HOST=localhost` por `DB_HOST=127.0.0.1`: fuerza TCP y se lo salta.
 
-**Los mensajes de validación salen en inglés.** Laravel 12 no trae traducciones al
-español. Se resuelve en la fase 1.1 publicando `lang/es`.
+## Repaso previo a la fase 1.1
 
-## Pendiente de limpiar
+Antes de escribir Android se revisó lo desplegado. Las cuentas de prueba y la contraseña
+temporal de `hola@israelzamora.es` quedaron resueltas. Lo demás cambió en el código y
+**entra en el siguiente despliegue**:
 
-Dos cuentas creadas para probar:
+| Qué | Por qué |
+|---|---|
+| Fuera `routes/web.php` y `EnsureAuthenticated` | `/informe-salud` devolvía 500 en producción por dos motivos a la vez: redirigía a una ruta `login` inexistente y su middleware validaba el token sin autenticar a nadie. Ningún test pedía esa ruta. La lógica sigue en `ReportController`, sin ruta, para la fase 1.5 |
+| Fuera la cookie `fitloop_token` | Llevaba el token de Sanctum en claro (estaba excluida del cifrado en `bootstrap/app.php`) y sin `Secure`, siete días. Solo servía a la ruta de arriba |
+| `login` compara siempre un hash | Sin usuario se saltaba bcrypt y la respuesta volvía mucho antes: el tiempo delataba qué correos existen, justo lo que `forgot-password` evita |
+| `lang/es/validation.php` | Los errores de validación salían en inglés. `APP_LOCALE` por defecto es `es` en `config/app.php`, así que el `.env` del servidor no necesita tocarse |
+| `s-rank`, no `rank-s` | `build-deploy.sh` y `.env.produccion.example` nombraban un subdominio que no existe. El script decía que subieras a `public_html/rank-s.israelzamora.es/` |
+| `MAIL_PORT=465` + `MAIL_SCHEME=smtps` en el ejemplo | El ejemplo decía 587/`smtp` mientras producción usa el 465. Reconstruir el `.env` desde el ejemplo repetía el fallo del correo |
 
-```sql
-DELETE FROM users WHERE email IN ('prueba-despliegue@israelzamora.es');
-```
-
-Y `hola@israelzamora.es` tiene una contraseña temporal que se escribió en una
-conversación: **cámbiala**.
+⚠️ Al subir este despliegue, `/informe-salud` deja de existir. Ya no funcionaba.
 
 ## Recordatorio
 

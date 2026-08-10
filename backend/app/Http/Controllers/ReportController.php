@@ -13,9 +13,14 @@ use Illuminate\Http\Request;
 
 /**
  * Informe de salud unificado (peso + nutrición + entrenos) para llevar
- * al médico / nutricionista. Pantalla en /informe-salud, PDF en /informe-salud/pdf.
- * Rutas web (cookie fitloop_token) para que el enlace de descarga funcione
- * con una navegación normal del navegador, sin Bearer.
+ * al médico / nutricionista.
+ *
+ * ponytail: sin ruta que llegue hasta aquí. Se conserva porque los agregados son
+ * la parte cara y la fase 1.5 los necesita enteros; lo que se borró fue cómo se
+ * entraba: una cookie propia, en claro y sin Secure, que además estaba rota. Al
+ * republicarlo hay que resolver dos cosas que antes no lo estaban: de dónde sale
+ * el usuario (URL::temporarySignedRoute firmando el id, no $request->user(), que
+ * en una ruta web sin sesión viene vacío) y que el enlace caduque solo.
  */
 class ReportController extends Controller
 {

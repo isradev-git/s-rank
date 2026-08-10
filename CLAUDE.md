@@ -47,9 +47,23 @@ las casillas `[✓]` son decoración sobre listas y botones normales.
 
 **2 · El Sistema no sabe de dominio; los módulos no saben del Sistema.** Los módulos
 publican eventos y el Sistema decide qué hacer con ellos. Añadir un módulo en la fase 2
-debe ser publicar eventos nuevos, nunca tocar el núcleo. Ya está así en el backend
-(`backend/app/System/` y `backend/app/Events/`) y hay que repetirlo en Android
-(`core/system/` frente a `feature/*`).
+debe ser publicar eventos nuevos, nunca tocar el núcleo.
+
+En el backend **solo se cumple la mitad**, y conviene saber cuál antes de copiar el patrón
+a Android:
+
+- **Sí:** los módulos no saben del Sistema. Los controladores publican eventos
+  (`app/Events/`) y un único puente, `UpdateSystemProgress`, los traduce a llamadas al
+  Sistema. Ningún controlador menciona `App\System`.
+- **No:** el Sistema sí sabe de dominio. `QuestService` consulta `MealLog`, `WaterLog`,
+  `SupplementLog` y `Workout` directamente, y `SystemService::afterWorkout()` recibe un
+  `Workout`. Un módulo nuevo obliga a tocar el núcleo.
+
+No se arregla: para una app personal, ese acoplamiento es más barato que la indirección
+que haría falta para quitarlo. Lo que no se hace es replicarlo en Android construyendo un
+bus de eventos ceremonial encima. En Android la separación que sí sale gratis es la
+dirección de dependencias de Gradle: **`core/system` no declara `feature/*`**, y de eso se
+encarga el compilador sin que nadie tenga que acordarse.
 
 **El XP se calcula siempre en el servidor.** La app lo pinta, nunca lo decide.
 
@@ -93,14 +107,20 @@ que impedía iniciar sesión a todo el mundo— pasaron los 254 tests y solo apa
 tocar el servidor. Si algo depende del tipo de una columna, del transporte de correo o de
 la red, un test verde no demuestra nada.
 
+**Y lo que no tiene test no lo cubre nadie.** `/informe-salud` llevaba desde el despliegue
+devolviendo 500 con la suite entera en verde: no había un solo test que pidiera esa ruta.
+Antes de dar por buena una ruta, comprueba que alguien la llama.
+
 **Las fechas viajan en UTC.** El servidor está en `Europe/Madrid` pero la API serializa
 instantes en UTC. Hay que convertir antes de quedarse con un día, o «hoy» cambiará a
 medianoche menos dos horas.
 
 **Comparar fechas con `whereDate`, no con `where`.** Eloquent las guarda con hora incluida.
 
-**Los mensajes de validación salen en inglés.** Laravel 12 no trae traducciones al
-español. Pendiente para la fase 1.1: `php artisan lang:publish` y traducir.
+**Los mensajes de validación ya salen en español**, en `backend/lang/es/validation.php`.
+`APP_LOCALE` por defecto es `es` en `config/app.php`, así que no hay que acordarse de
+ponerlo en el `.env` del servidor. `fallback_locale` sigue en `en`: una regla sin traducir
+sale en inglés, nunca como `validation.loquesea`.
 
 **Límites de intentos por IP** que te vas a comer al probar auth: login 5/min, registro
 3/hora, recuperación 3/hora. El contador vive en la tabla `cache`; `DELETE FROM cache;` lo

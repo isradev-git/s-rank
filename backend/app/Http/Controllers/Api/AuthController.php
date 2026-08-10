@@ -18,6 +18,13 @@ class AuthController extends Controller
      */
     public static ?string $lastCodeForTesting = null;
 
+    /**
+     * Hash de una contraseña aleatoria que nadie conoce, contra el que se compara
+     * cuando el correo no existe. Sirve para que comprobar una cuenta inexistente
+     * cueste el mismo tiempo que comprobar una real: ver el comentario de login().
+     */
+    private const HASH_SENUELO = '$2y$12$96UFsKhZ57oAENNGyJK24.Y6lWc6rcvyVJPj8ACa0yYBIBzcKMsda';
+
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -117,27 +124,30 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        // Se comprueba el hash siempre, exista el usuario o no. Saltarse bcrypt cuando
+        // el correo no está registrado hace que la respuesta vuelva dos órdenes de
+        // magnitud antes, y ese tiempo dice qué cuentas existen: la misma fuga que
+        // forgot-password evita respondiendo siempre lo mismo.
+        $correcta = Hash::check($request->password, $user?->password ?? self::HASH_SENUELO);
+
+        if (! $user || ! $correcta) {
             throw ValidationException::withMessages([
                 'email' => ['Credenciales incorrectas.'],
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         return response()->json([
-            'access_token' => $token,
+            'access_token' => $user->createToken('auth_token')->plainTextToken,
             'token_type'   => 'Bearer',
             'user_name'    => $user->name,
             'is_admin'     => (bool) $user->is_admin,
-        ])->cookie('fitloop_token', $token, 60 * 24 * 7, '/', null, false, true);
+        ]);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Sesión cerrada correctamente.'])
-            ->withoutCookie('fitloop_token');
+        return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }
 }
