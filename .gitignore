@@ -55,3 +55,8 @@ Thumbs.db
 # ── Local de esta máquina ─────────────────────────────────────────────────
 .superpowers/
 no_subir_referencias/
+
+# Copia de lo que hay ahora mismo en el servidor. El .env de dentro ya lo cubre
+# la regla de arriba, pero la carpeta entera va aquí para que nada de lo que se
+# baje del FTP —logs, un volcado, lo que sea— pueda colarse por descuido.
+nosubir_archivos_prod_actual/
