@@ -245,7 +245,7 @@ class FoodController extends Controller
         ]);
 
         try {
-            $disk = Storage::disk('public');
+            $disk = Storage::disk('uploads');
 
             // En algunos hostings la carpeta no existe inicialmente.
             if (! $disk->exists('nutrition/foods')) {
@@ -258,7 +258,7 @@ class FoodController extends Controller
             }
 
             // Guardamos en storage/app/public/nutrition/foods/{uuid}.{ext}
-            $path = $request->file('image')->store('nutrition/foods', 'public');
+            $path = $request->file('image')->store('nutrition/foods', 'uploads');
             $food->update(['image_path' => $path]);
         } catch (Throwable $e) {
             report($e);
@@ -296,7 +296,7 @@ class FoodController extends Controller
         }
 
         if ($food->image_path) {
-            Storage::disk('public')->delete($food->image_path);
+            Storage::disk('uploads')->delete($food->image_path);
         }
 
         $food->delete();

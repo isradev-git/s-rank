@@ -206,18 +206,18 @@ class RecipeController extends Controller
 
         // Borramos la imagen anterior si existía (evitamos archivos huérfanos)
         if ($recipe->image_path) {
-            Storage::disk('public')->delete($recipe->image_path);
+            Storage::disk('uploads')->delete($recipe->image_path);
         }
 
         // Guardamos en storage/app/public/nutrition/recipes/{uuid}.{ext}
-        $path = $request->file('image')->store('nutrition/recipes', 'public');
+        $path = $request->file('image')->store('nutrition/recipes', 'uploads');
 
         $recipe->update(['image_path' => $path]);
 
         return response()->json([
             'message'    => 'Imagen subida correctamente.',
             'image_path' => $path,
-            'image_url'  => Storage::url($path),
+            'image_url'  => Storage::disk('uploads')->url($path),
         ]);
     }
 
