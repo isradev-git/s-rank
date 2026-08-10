@@ -590,6 +590,7 @@ rsync -a \
   --exclude='/.env' \
   --exclude='/.env.*' \
   --exclude='/phpunit.xml' \
+  --exclude='/.phpunit.result.cache' \
   --exclude='/build-deploy.sh' \
   --exclude='*.md' \
   --exclude='/database/*.sqlite' \
