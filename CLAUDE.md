@@ -3,94 +3,151 @@
 Guía para Claude Code (claude.ai/code) al trabajar en este repositorio.
 
 ## Idioma
-Responde siempre en español.
+
+Responde siempre en español. También los mensajes de commit, los comentarios del código y
+cualquier texto que vaya a ver el usuario final.
 
 ## Qué es esto
 
 **S-RANK** es una aplicación Android (Kotlin + Jetpack Compose) para hábitos y progreso
 personal, con estética de terminal y progresión de videojuego inspirada en *Solo Leveling*.
+Sustituye a FitLoop, una web Laravel + Blade que sigue en `old/` como referencia.
 
-**El backend está terminado y en producción**; la aplicación Android todavía no existe.
+**El backend está terminado y en producción. La aplicación Android todavía no existe.**
 
-Se trabaja **una fase por conversación**. Empieza siempre por el índice de fases, que dice
-en cuál estamos y qué hay que leer:
+## Por dónde empezar
+
+Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qué leer:
 
     docs/superpowers/fases/README.md
 
-El diseño completo y aprobado —arquitectura, fórmulas del sistema de progresión, sistema
-de diseño y mapa de pantallas— está en:
+| Documento | Para qué |
+|---|---|
+| `docs/superpowers/fases/` | un fichero por fase: qué construir y cuándo está terminada |
+| `docs/superpowers/specs/2026-08-10-s-rank-design.md` | el diseño aprobado: arquitectura, fórmulas, sistema de diseño, pantallas |
+| `docs/superpowers/plans/despliegue-fase-1-0.md` | qué hay montado en producción |
 
-    docs/superpowers/specs/2026-08-10-s-rank-design.md
+| Fase | Estado |
+|---|---|
+| 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
+| 1.1 · Esqueleto Android: navegación, diseño, login | siguiente |
+| 1.2 · Entrenamiento, con borrador sin conexión | pendiente |
+| 1.3 · Nutrición, agua, suplementos, actividad | pendiente |
+| 1.4 · Progreso: historial, calendario, gráficas | pendiente |
+| 1.5 · Perfil, logros, administración | pendiente |
 
-## Restricción rectora
+## Las dos reglas rectoras
 
-La estética de terminal es **puramente visual**. Hay usuarios que no saben qué es una
+**1 · La estética de terminal es puramente visual.** Hay usuarios que no saben qué es una
 terminal. Ninguna pantalla puede exigir vocabulario ni modelo mental de shell: todo se
 hace pulsando, las palabras van en español llano, y el prompt `$`, los comentarios `//` y
 las casillas `[✓]` son decoración sobre listas y botones normales.
 
 > Si una pantalla solo se entiende sabiendo lo que es una terminal, está mal diseñada.
 
+**2 · El Sistema no sabe de dominio; los módulos no saben del Sistema.** Los módulos
+publican eventos y el Sistema decide qué hacer con ellos. Añadir un módulo en la fase 2
+debe ser publicar eventos nuevos, nunca tocar el núcleo. Ya está así en el backend
+(`backend/app/System/` y `backend/app/Events/`) y hay que repetirlo en Android
+(`core/system/` frente a `feature/*`).
+
+**El XP se calcula siempre en el servidor.** La app lo pinta, nunca lo decide.
+
 ## Estructura
 
 ```
 /                    proyecto Gradle de Android (aún por crear, fase 1.1)
-  app/               módulo de aplicación
+  app/               navegación y arranque
   core/system/       nivel, XP, rango, misiones, logros, estadísticas
   core/ui/           sistema de diseño
-  data/              API, sesión, borrador local
+  data/              api · session · draft (Room, solo el borrador de entreno)
   feature/           training · nutrition · progress · profile · auth
   backend/           Laravel API-only, YA en producción
-  docs/
-    superpowers/fases/   un documento por fase — empieza aquí
-    superpowers/specs/   el diseño aprobado
-    superpowers/plans/   planes de implementación y registro del despliegue
-  old/               FitLoop, la app Laravel anterior — SOLO LECTURA
+  docs/superpowers/  fases · specs · plans
+  old/               FitLoop, la app anterior — SOLO LECTURA
 ```
+
+## Backend
+
+Desplegado en `https://s-rank.israelzamora.es`, con 273 tests en verde y los datos reales
+en MySQL.
+
+```bash
+cd backend
+php artisan test                 # la suite entera
+php artisan srank:recalculate    # rehace el progreso desde el historial
+bash build-deploy.sh             # genera deploy/ para subir por FTP
+```
+
+Se despliega **solo por FTP** en Ginernet: sin SSH, sin Composer ni Node en el servidor.
+Todo se prepara en local. Las migraciones nuevas se ejecutan a mano por phpMyAdmin y se
+apuntan en la tabla `migrations`.
+
+Toda escritura que afecte al progreso devuelve un bloque `system` en la misma respuesta,
+con el XP ganado, las subidas de nivel, los logros desbloqueados y el progreso actualizado.
+
+## Trampas que ya han costado tiempo
+
+**La suite corre sobre SQLite y sin red.** Los cuatro fallos de la fase 1.0 —incluido uno
+que impedía iniciar sesión a todo el mundo— pasaron los 254 tests y solo aparecieron al
+tocar el servidor. Si algo depende del tipo de una columna, del transporte de correo o de
+la red, un test verde no demuestra nada.
+
+**Las fechas viajan en UTC.** El servidor está en `Europe/Madrid` pero la API serializa
+instantes en UTC. Hay que convertir antes de quedarse con un día, o «hoy» cambiará a
+medianoche menos dos horas.
+
+**Comparar fechas con `whereDate`, no con `where`.** Eloquent las guarda con hora incluida.
+
+**Los mensajes de validación salen en inglés.** Laravel 12 no trae traducciones al
+español. Pendiente para la fase 1.1: `php artisan lang:publish` y traducir.
+
+**Límites de intentos por IP** que te vas a comer al probar auth: login 5/min, registro
+3/hora, recuperación 3/hora. El contador vive en la tabla `cache`; `DELETE FROM cache;` lo
+reinicia sin tocar datos.
+
+## Seguridad
+
+**El repositorio es privado y tiene que seguir siéndolo.** Contiene configuración de
+despliegue de Ginernet.
+
+**Nunca se commitea:** `*.sqlite`, `*.sql` ni `.env*`. Llevan dentro datos de salud reales,
+hashes de contraseña y credenciales. Están en el `.gitignore` y `build-deploy.sh` aborta
+si alguno se cuela en el paquete que se sube por web.
+
+**No inventes mensajes que delaten cuentas.** `forgot-password` responde 200 exista o no el
+correo, a propósito. Un mensaje distinto por caso convierte el endpoint en una lista de
+usuarios válidos.
+
+## Cómo trabajar aquí
+
+**Un test que no falla sin el arreglo no vale.** Al corregir un fallo: quita el arreglo,
+comprueba que el test falla, restaura. Si pasa en ambos casos, no está probando nada.
+
+**Tests con PHPUnit, no con Pest**, aunque el spec §11 diga Pest. La suite ya estaba
+escrita así y no compensa mezclar dos estilos.
+
+**Commits en español**, con el porqué en el cuerpo y no solo el qué.
+
+**`ponytail:`** marca una simplificación deliberada y nombra su techo.
 
 ## `old/` — qué es y cómo usarlo
 
-`old/` es FitLoop, la aplicación Laravel + Blade que S-RANK sustituye. **No se modifica.**
-Está ahí como referencia de las reglas de negocio ya validadas durante el porte:
+`old/` es FitLoop. **No se modifica.** Es la referencia de las reglas de negocio ya
+validadas durante el porte:
 
 | Qué buscar | Dónde |
 |---|---|
 | Tabla MET por modo, TDEE, racha real | `old/app/Http/Controllers/Api/DashboardController.php` |
 | Detección de récords, series por ejercicio | `old/app/Http/Controllers/Api/WorkoutController.php` |
 | Mifflin-St Jeor y el asistente nutricional | `old/resources/views/nutrition/dashboard.blade.php` |
-| Los 12 logros actuales | `old/app/Http/Controllers/Api/AchievementController.php` |
+| Los 12 logros antiguos | `old/app/Http/Controllers/Api/AchievementController.php` |
 | Flujo completo de sesión de entreno | `old/resources/views/training.blade.php` |
 | Catálogo de 1.506 alimentos (JSON fuente) | `old/alimentos/` |
 | Plantillas de entrenamiento | `old/database/seeders/TemplatesTableSeeder.php` |
 
 Se borra entero al cerrar la fase 1.
 
-⚠️ `old/database/database.sqlite` contiene los datos reales de producción y está
-excluido de git. Es la única copia: hay que respaldarlo fuera del proyecto antes de
-migrar a MySQL.
-
-## Backend
-
-`backend/` es el Laravel de FitLoop reducido a API. **Está terminado y desplegado** en
-`https://s-rank.israelzamora.es`, con 273 tests en verde y los datos reales migrados a
-MySQL. Qué hay montado y con qué credenciales:
-
-    docs/superpowers/plans/despliegue-fase-1-0.md
-
-Se despliega **solo por FTP** en Ginernet: sin SSH, sin Composer ni Node en el servidor.
-Todo se prepara en local con `bash build-deploy.sh` y se sube ya listo. Las migraciones
-nuevas se ejecutan a mano por phpMyAdmin y se apuntan en la tabla `migrations`.
-
-Toda escritura que afecte al progreso devuelve un bloque `system` en la misma respuesta,
-con el XP ganado, las subidas de nivel, los logros y el progreso actualizado. **El XP se
-calcula siempre en el servidor**: la app lo pinta, nunca lo decide.
-
-## Estado
-
-| Fase | Estado |
-|---|---|
-| 1.0 · Backend | **hecha**, en producción |
-| 1.1 · Esqueleto Android | siguiente |
-| 1.2 a 1.5 | pendientes |
-
-Los detalles de cada una, en `docs/superpowers/fases/`.
+⚠️ `old/database/database.sqlite` y `old/database/database.2026-05-backup.sqlite` son la
+**única copia** de los datos originales de FitLoop y están excluidos de git. Ya se
+migraron a MySQL, pero **hay que respaldarlos fuera del proyecto antes de borrar `old/`**.
