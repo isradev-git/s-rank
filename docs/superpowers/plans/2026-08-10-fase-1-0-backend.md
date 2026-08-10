@@ -1626,17 +1626,22 @@ class XpLedger
         return $granted;
     }
 
+    /**
+     * ponytail: whereDate y no where. Eloquent guarda las fechas con hora incluida,
+     * así que en SQLite —el motor de los tests— una comparación literal no casa nunca.
+     * La misma regla vale para el resto del Sistema: comparar días con whereDate.
+     */
     public function spentOn(User $user, CarbonImmutable $date): int
     {
         return (int) XpEvent::where('user_id', $user->id)
-            ->where('date', $date->toDateString())
+            ->whereDate('date', $date->toDateString())
             ->sum('amount');
     }
 
     public function countSource(User $user, string $source, CarbonImmutable $date): int
     {
         return XpEvent::where('user_id', $user->id)
-            ->where('date', $date->toDateString())
+            ->whereDate('date', $date->toDateString())
             ->where('source', $source)
             ->count();
     }
