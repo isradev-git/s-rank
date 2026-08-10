@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\WorkoutStored;
 use App\Http\Controllers\Controller;
 use App\Models\Workout;
 use App\Models\ExerciseSet;
@@ -173,6 +174,10 @@ class WorkoutController extends Controller
 
             $data                = $workout->load('sets')->toArray();
             $data['new_records'] = $newRecords;
+
+            $event = new WorkoutStored($workout, $newRecords);
+            event($event);
+            $data['system'] = $event->rewards;
 
             return response()->json($data, 201);
         });

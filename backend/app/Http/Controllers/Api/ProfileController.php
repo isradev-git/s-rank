@@ -31,16 +31,22 @@ class ProfileController extends Controller
 
         // Registrar el cambio de peso — usa updateOrCreate para evitar violar
         // la constraint única [user_id, date] si se actualiza varias veces el mismo día.
+        $system = null;
+
         if (isset($validated['weight']) && $validated['weight'] != $user->weight) {
             WeightLog::updateOrCreate(
                 ['user_id' => $user->id, 'date' => now()->toDateString()],
                 ['weight' => $validated['weight']]
             );
+
+            $event = new \App\Events\WeightLogged($user, \Carbon\CarbonImmutable::today());
+            event($event);
+            $system = $event->rewards;
         }
 
         $user->update($validated);
 
-        return response()->json(['message' => 'Profile updated', 'user' => $user]);
+        return response()->json(['message' => 'Profile updated', 'user' => $user, 'system' => $system]);
     }
 
     public function weightHistory(Request $request)

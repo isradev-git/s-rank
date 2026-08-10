@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\MealLogged;
 use App\Http\Controllers\Controller;
 use App\Models\FoodItem;
 use App\Models\MealLog;
 use App\Models\Workout;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -170,9 +172,13 @@ class MealLogController extends Controller
             ...$macros,  // Spread del array de macros calculados
         ]);
 
+        $event = new MealLogged($request->user(), CarbonImmutable::parse($log->date));
+        event($event);
+
         return response()->json([
             'message'  => 'Comida registrada correctamente.',
             'meal_log' => $log->load('foodItem'),
+            'system'   => $event->rewards,
         ], 201);
     }
 

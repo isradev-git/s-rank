@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\WaterLogged;
 use App\Http\Controllers\Controller;
 use App\Models\WaterLog;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -79,12 +81,16 @@ class WaterController extends Controller
             ->whereDate('date', $log->date)
             ->sum('amount_ml');
 
+        $event = new WaterLogged($user, CarbonImmutable::parse($log->date));
+        event($event);
+
         return response()->json([
             'message'  => 'Agua registrada.',
             'entry'    => $log,
             'total_ml' => $total,
             'goal_ml'  => $goalMl,
             'pct'      => $goalMl > 0 ? min(round(($total / $goalMl) * 100), 100) : 0,
+            'system'   => $event->rewards,
         ], 201);
     }
 

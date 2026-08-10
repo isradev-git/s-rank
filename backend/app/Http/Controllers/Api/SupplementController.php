@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\SupplementToggled;
 use App\Http\Controllers\Controller;
 use App\Models\SupplementLog;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -68,7 +70,10 @@ class SupplementController extends Controller
             ['taken', 'updated_at']
         );
 
-        return response()->json(['message' => 'Suplemento actualizado.']);
+        $event = new SupplementToggled($request->user(), CarbonImmutable::parse($validated['date']));
+        event($event);
+
+        return response()->json(['message' => 'Suplemento actualizado.', 'system' => $event->rewards]);
     }
 
     public function reset(Request $request): JsonResponse

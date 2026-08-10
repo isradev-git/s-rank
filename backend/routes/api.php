@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\WaterController;
 use App\Http\Controllers\Api\SupplementController;
 use App\Http\Controllers\Api\UserManagementController;
 use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\SystemController;
 use App\Http\Middleware\EnsureAdmin;
 
 // Solo login (el registro público está desactivado)
@@ -62,6 +63,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/exercises/records', [ExerciseController::class, 'records']);
 
     Route::get('/achievements', [AchievementController::class, 'index']);
+
+    // ── El Sistema ─────────────────────────────────────────────────────────
+    Route::get('/system/today', [SystemController::class, 'today']);
+    Route::get('/system/profile', [SystemController::class, 'profile']);
+    Route::get('/system/achievements', [SystemController::class, 'achievements']);
+    Route::post('/system/quests/{key}/complete', [SystemController::class, 'completeQuest']);
 
     // ── Nutrición ──────────────────────────────────────────────────────────
     // Objetivo nutricional del usuario
