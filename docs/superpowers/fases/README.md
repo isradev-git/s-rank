@@ -9,7 +9,7 @@ construir, qué endpoints se consumen y cuándo se puede dar por terminada.
 | Fase | Contenido | Estado |
 |---|---|---|
 | [1.0](fase-1.0-backend.md) | Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha** — en producción |
-| [1.1](fase-1.1-esqueleto.md) | Esqueleto Android: navegación, diseño, login y registro | siguiente |
+| [1.1](fase-1.1-esqueleto.md) | Esqueleto Android: navegación, diseño, login y registro | **en curso** — diseño cerrado y plan escrito, sin código |
 | [1.2](fase-1.2-entrenamiento.md) | Entrenamiento, con borrador sin conexión | pendiente |
 | [1.3](fase-1.3-nutricion.md) | Nutrición, agua, suplementos, actividad, recetas | pendiente |
 | [1.4](fase-1.4-progreso.md) | Historial, calendario, gráficas, récords | pendiente |
@@ -29,6 +29,7 @@ que gobiernan el proyecto entero son:
 | Documento | Qué contiene |
 |---|---|
 | `docs/superpowers/specs/2026-08-10-s-rank-design.md` | El diseño aprobado: arquitectura, fórmulas, sistema de diseño, mapa de pantallas |
+| `docs/superpowers/specs/2026-08-11-core-ui-design.md` | El sistema de diseño de Android al detalle: los once colores con su contraste medido, la escala tipográfica y los ocho componentes |
 | `docs/superpowers/plans/despliegue-fase-1-0.md` | Qué hay montado en producción y con qué credenciales |
 | Este directorio | Qué toca en cada fase |
 

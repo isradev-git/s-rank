@@ -14,6 +14,35 @@ pelearse ahora con el sistema de diseño y no después.
 La API está en producción y verificada: `https://s-rank.israelzamora.es`. Todo lo que esta
 fase necesita del servidor ya funciona.
 
+### Lo que se cerró antes de escribir código (11 de agosto de 2026)
+
+La fase se abrió con un repaso del sistema de diseño, porque es lo que condiciona las
+cuatro fases siguientes. De ahí salieron dos documentos y un entorno montado:
+
+| Qué | Dónde |
+|---|---|
+| El sistema de diseño al detalle | `../specs/2026-08-11-core-ui-design.md` |
+| El plan de implementación, 13 tareas | `../plans/2026-08-11-fase-1-1-esqueleto-android.md` |
+
+**El entorno de compilación ya está instalado**, en WSL y sin `sudo`: JDK 21 en `~/jdk`,
+Android SDK en `~/Android/Sdk` y Gradle 9.5.0 en `~/gradle-dist`. El plan lo detalla en su
+sección «Entorno». No hay que instalar nada más.
+
+Cuatro cosas se comprobaron **midiendo, no suponiendo**, y cambian lo que dice el resto de
+este documento:
+
+- **AGP 9.3.1 cambió el DSL.** `compileSdk = 36` ya no compila: ahora es
+  `compileSdk { version = release(36) }`. Y el plugin `org.jetbrains.kotlin.android` **no
+  se aplica**, porque AGP 9 trae Kotlin dentro. Verificado con un proyecto de prueba que
+  compiló, generó APK y pasó tests con Compose y `kotlinx.serialization`.
+- **JetBrains Mono trae todos los glifos** del diseño (`▓ ░ ▒ █ ▸ ▾ ✓ ◆ ◇ ─ ▔`),
+  comprobado leyendo la tabla `cmap` de la fuente. Cae el respaldo con `Canvas` que el
+  spec dejaba previsto por si faltaban.
+- **Sobre `/mnt/c` la compilación incremental son 15 segundos**, los tests 23 y la fría dos
+  minutos. No hace falta mudar el `buildDir` al disco de WSL.
+- **El `.gitignore` ya tiene lo de Android**, al contrario de lo que decía el aviso de aquí
+  abajo. No hay nada que añadir.
+
 ## Qué hay que construir
 
 ### El proyecto Gradle
@@ -33,10 +62,9 @@ feature/auth/         login, registro, recuperar contraseña
 Los módulos `feature/training`, `nutrition`, `progress` y `profile` se crean vacíos o no
 se crean: los levanta cada fase cuando le toca.
 
-⚠️ El `.gitignore` de la raíz está escrito para un proyecto Laravel. Hay que añadirle lo
-de Android (`/build`, `.gradle/`, `local.properties`, `*.apk`, `*.keystore`) **sin romper**
-las reglas que ya protegen `*.sqlite`, `*.sql` y `.env*`, que son las que evitan que se
-suban datos de salud y credenciales.
+~~⚠️ El `.gitignore` de la raíz está escrito para un proyecto Laravel. Hay que añadirle lo
+de Android.~~ **Ya lo tiene**, y por encima de las reglas que protegen `*.sqlite`, `*.sql`
+y `.env*`. Comprobado el 11 de agosto: no hay nada que hacer aquí.
 
 ### El sistema de diseño — `core/ui/`
 
@@ -56,10 +84,13 @@ Componentes que quedan escritos aquí y ya no se rediscuten:
 - Cabecera de sección plegable `▸ TÍTULO   [2 de 4] ▾`
 - Comentario `// …` en color apagado
 - Barra de bloques `[▓▓▓▓▓░░░░░]` para XP y agua
-- Barra continua para estadísticas y macros
+- ~~Barra continua para estadísticas y macros~~ → aplazada a la 1.4, que es donde
+  aparecen las estadísticas
 - Botón con borde visible, 48 dp de alto mínimo
 - Ventana del Sistema con esquinas en ángulo
-- Insignia de rango y rombo de rareza `◆` / `◇`
+- Insignia de rango; ~~rombo de rareza `◆` / `◇`~~ → aplazado a la 1.5, con los logros
+- **`CampoSRank`**, campo de texto — no estaba en esta lista y hace falta: los tres
+  formularios de autenticación lo usan. El spec §5.5 ya legislaba su borde.
 
 ### La capa de datos — `data/`
 
@@ -178,18 +209,35 @@ que la app se encuentra:
 
 ## Prompt para arrancar el chat
 
+El diseño y el plan **ya están hechos**. Este prompt arranca el chat de desarrollo:
+
 ```
-Vamos con la fase 1.1 de S-RANK: el esqueleto Android.
+Seguimos con la fase 1.1 de S-RANK: el esqueleto Android. El sistema de diseño
+está cerrado y el plan de implementación escrito. Toca escribir el código.
 
 Lee primero, en este orden:
-  docs/superpowers/fases/fase-1.1-esqueleto.md
-  docs/superpowers/specs/2026-08-10-s-rank-design.md  (§3, §4, §7, §8, §9)
-  docs/superpowers/fases/fase-1.0-backend.md
+  docs/superpowers/plans/2026-08-11-fase-1-1-esqueleto-android.md   ← el plan, entero
+  docs/superpowers/specs/2026-08-11-core-ui-design.md               ← el sistema de diseño
+  docs/superpowers/fases/fase-1.1-esqueleto.md                      ← cuándo está terminada
 
 Hay capturas de referencia de la estética en /no_subir_referencias.
+La API está en producción y verificada: https://s-rank.israelzamora.es
 
-La API ya está en producción y verificada: https://s-rank.israelzamora.es
+El entorno ya está instalado, en WSL y sin sudo. Toda orden de Gradle se lanza así:
+  export JAVA_HOME=~/jdk ANDROID_HOME=~/Android/Sdk
 
-Antes de escribir código quiero repasar contigo cómo va a quedar el sistema
-de diseño, que es lo que condiciona las cuatro fases siguientes.
+No hay ni una línea de Kotlin todavía: se empieza por la tarea 1, el esqueleto
+de Gradle. Ejecuta el plan tarea por tarea con superpowers:subagent-driven-development
+—un subagente nuevo por tarea y revisión entre medias—, parando después de cada
+una para que yo lo mire.
+
+Tres cosas del plan que conviene no olvidar:
+  · AGP 9 cambió el DSL: compileSdk { version = release(36) }, y el plugin
+    org.jetbrains.kotlin.android NO se aplica.
+  · Un test que no falla sin el arreglo no vale.
+  · La pantalla de recuperar contraseña dice siempre lo mismo, exista la cuenta
+    o no. Es una regla de seguridad, no una decisión de redacción.
 ```
+
+Si prefieres ejecutarlo en la misma conversación por tandas, cambia esa línea por
+`superpowers:executing-plans`.

@@ -25,12 +25,14 @@ Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qu
 |---|---|
 | `docs/superpowers/fases/` | un fichero por fase: qué construir y cuándo está terminada |
 | `docs/superpowers/specs/2026-08-10-s-rank-design.md` | el diseño aprobado: arquitectura, fórmulas, sistema de diseño, pantallas |
+| `docs/superpowers/specs/2026-08-11-core-ui-design.md` | el sistema de diseño de Android: colores con su contraste medido, tipografía, componentes |
+| `docs/superpowers/plans/2026-08-11-fase-1-1-esqueleto-android.md` | el plan de la fase en curso, 13 tareas |
 | `docs/superpowers/plans/despliegue-fase-1-0.md` | qué hay montado en producción |
 
 | Fase | Estado |
 |---|---|
 | 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
-| 1.1 · Esqueleto Android: navegación, diseño, login | siguiente |
+| 1.1 · Esqueleto Android: navegación, diseño, login | **en curso**: diseño y plan hechos, sin código |
 | 1.2 · Entrenamiento, con borrador sin conexión | pendiente |
 | 1.3 · Nutrición, agua, suplementos, actividad | pendiente |
 | 1.4 · Progreso: historial, calendario, gráficas | pendiente |
@@ -80,6 +82,24 @@ encarga el compilador sin que nadie tenga que acordarse.
   docs/superpowers/  fases · specs · plans
   old/               FitLoop, la app anterior — SOLO LECTURA
 ```
+
+## Android
+
+El entorno está instalado en WSL **sin `sudo`**: JDK 21 en `~/jdk`, SDK en `~/Android/Sdk`
+y Gradle 9.5.0 en `~/gradle-dist`. Toda orden de Gradle necesita las dos variables:
+
+```bash
+export JAVA_HOME=~/jdk ANDROID_HOME=~/Android/Sdk
+./gradlew assembleDebug        # ~15 s incremental sobre /mnt/c, 2 min en frío
+./gradlew test
+```
+
+**No se crea `local.properties`**: `ANDROID_HOME` ya se lo dice a Gradle, y ese fichero
+apuntaría a un SDK distinto si algún día se abre el proyecto desde Windows.
+
+**AGP 9 cambió el DSL.** `compileSdk = 36` no compila; es `compileSdk { version =
+release(36) }`. Y **no se aplica `org.jetbrains.kotlin.android`**: AGP 9 trae Kotlin
+dentro y ese plugin es incompatible.
 
 ## Backend
 
