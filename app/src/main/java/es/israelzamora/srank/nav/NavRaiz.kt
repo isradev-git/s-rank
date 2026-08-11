@@ -1,15 +1,22 @@
 package es.israelzamora.srank.nav
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -31,10 +38,10 @@ import es.israelzamora.srank.hoy.PantallaPerfil
 import es.israelzamora.srank.hoy.PantallaProgreso
 import es.israelzamora.srank.session.Sesion
 import es.israelzamora.srank.ui.theme.SRank
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
 private object Rutas {
-    const val CARGANDO = "cargando"
     const val LOGIN = "login"
     const val REGISTRO = "registro"
     const val RECUPERAR = "recuperar"
@@ -57,33 +64,73 @@ private val PESTANAS = listOf(Rutas.HOY, Rutas.PROGRESO, Rutas.PERFIL)
  * Se extrae como función `internal` (en vez de vivir dentro del
  * `LaunchedEffect`) para poder fijar ese orden con un test de verdad — ver
  * `NavRaizTest.kt`.
+ *
+ * Esto por sí solo no basta: ver el comentario de `rutaInicial` en `NavRaiz`
+ * sobre por qué además hay que evitar que se componga ninguna pantalla antes
+ * de que esta función devuelva.
  */
 internal suspend fun decideRutaInicial(sesion: Sesion): String =
     if (sesion.token.first() != null) Rutas.HOY else Rutas.LOGIN
+
+/**
+ * Contrato 2: quien colecta `avisos` es quien limpia la sesión y decide a
+ * dónde ir, nunca el interceptor (que no puede suspender). Se extrae del
+ * `LaunchedEffect` de `NavRaiz` por la misma razón que `decideRutaInicial`:
+ * es lógica de corrutina pura —nada de `NavController` ni de Compose—, así
+ * que se puede fijar con un test normal sin más infraestructura. El
+ * `Flow<Unit>` se recibe por parámetro (no se lee `SesionExpirada.avisos`
+ * directamente aquí) porque `SesionExpirada.avisa()` es `internal` de
+ * `data/api`: un test de `app` no tiene forma de emitir sobre el objeto real,
+ * así que hace falta poder pasarle uno de mentira.
+ */
+internal suspend fun escuchaExpiracion(avisos: Flow<Unit>, sesion: Sesion, alLogin: () -> Unit) {
+    avisos.collect {
+        sesion.limpia()
+        alLogin()
+    }
+}
 
 @Composable
 fun NavRaiz(grafo: Grafo) {
     val nav = rememberNavController()
 
-    // Espera al primer valor de DataStore antes de decidir la pantalla. De
-    // paso, eso deja lleno el `tokenActual` que lee el interceptor, así que la
-    // primera petición ya sale con Authorization.
+    // El 401 desde cualquier pantalla: un solo sitio, y colectando desde ya
+    // —antes incluso de saber la ruta inicial—, porque este efecto vive en
+    // el cuerpo de NavRaiz, por encima de cualquier pantalla del NavHost, y
+    // dura tanto como la composición de la app entera. No se cancela al
+    // cambiar de pestaña ni de ruta.
     LaunchedEffect(Unit) {
-        val ruta = decideRutaInicial(grafo.sesion)
-        nav.navigate(ruta) {
-            popUpTo(Rutas.CARGANDO) { inclusive = true }
+        escuchaExpiracion(SesionExpirada.avisos, grafo.sesion) {
+            nav.navigate(Rutas.LOGIN) { popUpTo(0) }
         }
     }
 
-    // El 401 desde cualquier pantalla: un solo sitio. `NavRaiz` es la raíz de
-    // navegación, por encima del NavHost y de cualquier pantalla, así que
-    // este scope vive tanto como la composición de la app entera y no se
-    // cancela al cambiar de pestaña o de ruta.
+    // Contrato 1, la vuelta que dejó abierta la primera versión: esperar el
+    // primer valor del token y luego *navegar* no basta. Si el proceso había
+    // muerto con «hoy» en el back stack, NavHost restaura esa pantalla
+    // durante la composición, antes de que corra ningún LaunchedEffect;
+    // HoyViewModel se crea, su `init` dispara la petición, y sale sin
+    // Authorization porque tokenActual todavía no se ha rellenado. El 401
+    // que contesta el servidor hace que el colector de arriba borre un
+    // token válido: el fallo que este contrato existe para impedir, entrando
+    // por la puerta de al lado.
+    //
+    // La forma de cerrarla es no componer ninguna pantalla —y por tanto
+    // ningún ViewModel— hasta tener la ruta resuelta, en vez de navegar
+    // hacia ella después. `NavHost` solo se compone cuando `rutaInicial` deja
+    // de ser null.
+    var rutaInicial by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        SesionExpirada.avisos.collect {
-            grafo.sesion.limpia()
-            nav.navigate(Rutas.LOGIN) { popUpTo(0) }
-        }
+        rutaInicial = decideRutaInicial(grafo.sesion)
+    }
+
+    val inicio = rutaInicial
+    if (inicio == null) {
+        // Ni Scaffold ni NavHost: nada que pudiera componer una pantalla
+        // todavía. Solo el fondo, para no dejar un parpadeo del color por
+        // defecto de la ventana mientras se resuelve la ruta.
+        Box(Modifier.fillMaxSize().background(SRank.color.fondo))
+        return
     }
 
     val entrada by nav.currentBackStackEntryAsState()
@@ -96,11 +143,9 @@ fun NavRaiz(grafo: Grafo) {
     ) { relleno ->
         NavHost(
             navController = nav,
-            startDestination = Rutas.CARGANDO,
+            startDestination = inicio,
             modifier = Modifier.fillMaxSize().padding(relleno),
         ) {
-            composable(Rutas.CARGANDO) { Column {} }
-
             composable(Rutas.LOGIN) {
                 PantallaLogin(
                     vm = viewModel(factory = LoginViewModel.factoria(grafo.auth)),
@@ -173,13 +218,28 @@ fun NavRaiz(grafo: Grafo) {
  *
  * Fijas y no ocultables: perderlas en un scroll largo es peor que gastar los
  * 48 dp que ocupan.
+ *
+ * `windowInsetsPadding(WindowInsets.statusBars)`: con `enableEdgeToEdge()` en
+ * `MainActivity`, `Scaffold` coloca su `topBar` en (0,0) sin aplicarle
+ * ningún inset —lo espera del propio contenido, como hacen los `TopAppBar`
+ * de Material 3—, así que sin esto la pestaña queda debajo de la barra de
+ * estado del sistema, que además se come el toque.
+ *
+ * El color de la pestaña inactiva es `texto`, no `apagado`: el nombre de la
+ * pestaña es la única información de que hay una sección «progreso» o
+ * «perfil» —no hay icono—, y `apagado` da 2,72:1 sobre negro (ver
+ * `ContrasteTest.apagado_no_llega_a_45_y_por_eso_no_puede_llevar_datos`),
+ * muy por debajo del 4,5:1 que pide WCAG 1.4.3 para texto que dice algo. La
+ * pestaña activa se distingue por el color y por el subrayado; las inactivas
+ * solo tienen el color, así que no pueden ser el gris decorativo.
  */
 @Composable
 private fun Pestanas(rutaActual: String?, nav: NavHostController) {
     val indice = PESTANAS.indexOf(rutaActual).coerceAtLeast(0)
 
-    TabRow(
+    PrimaryTabRow(
         selectedTabIndex = indice,
+        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         containerColor = SRank.color.fondo,
         contentColor = SRank.color.ambar,
     ) {
@@ -199,7 +259,7 @@ private fun Pestanas(rutaActual: String?, nav: NavHostController) {
                     Text(
                         text = ruta,
                         style = SRank.texto.cuerpo,
-                        color = if (ruta == rutaActual) SRank.color.ambar else SRank.color.apagado,
+                        color = if (ruta == rutaActual) SRank.color.ambar else SRank.color.texto,
                     )
                 },
             )

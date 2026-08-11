@@ -1,9 +1,14 @@
 package es.israelzamora.srank.nav
 
 import es.israelzamora.srank.session.Sesion
+import es.israelzamora.srank.session.SesionEnMemoria
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -33,6 +38,7 @@ private class SesionFriaHastaColectar(tokenGuardado: String?) : Sesion {
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NavRaizTest {
 
     @Test
@@ -61,5 +67,52 @@ class NavRaizTest {
         val ruta = decideRutaInicial(sesion)
 
         assertEquals("login", ruta)
+    }
+
+    @Test
+    fun un_aviso_de_expiracion_limpia_la_sesion_y_avisa_a_quien_navega() = runTest {
+        val sesion = SesionEnMemoria()
+        sesion.guarda(token = "42|abcdef", nombre = "Israel")
+        val avisos = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        var vecesAlLogin = 0
+
+        // escuchaExpiracion no termina nunca por sí sola (es un collect sin
+        // límite, igual que hará el LaunchedEffect de NavRaiz), así que se
+        // lanza en un job aparte y se deja vivo mientras dura el test.
+        val job = launch { escuchaExpiracion(avisos, sesion, alLogin = { vecesAlLogin++ }) }
+        runCurrent()
+
+        avisos.emit(Unit)
+        runCurrent()
+
+        // Si esto falla con vecesAlLogin en 0, es que la limpieza no está
+        // avisando a quien navega: el token quedaría borrado pero la
+        // pantalla no se enteraría de que hay que volver a login.
+        assertNull("un aviso de expiración debe borrar el token", sesion.tokenActual)
+        assertEquals(1, vecesAlLogin)
+
+        job.cancel()
+    }
+
+    @Test
+    fun varios_avisos_limpian_y_avisan_cada_vez() = runTest {
+        val sesion = SesionEnMemoria()
+        sesion.guarda(token = "42|abcdef", nombre = "Israel")
+        val avisos = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        var vecesAlLogin = 0
+
+        val job = launch { escuchaExpiracion(avisos, sesion, alLogin = { vecesAlLogin++ }) }
+        runCurrent()
+
+        avisos.emit(Unit)
+        runCurrent()
+        sesion.guarda(token = "43|ghijkl", nombre = "Israel")
+        avisos.emit(Unit)
+        runCurrent()
+
+        assertEquals(2, vecesAlLogin)
+        assertNull(sesion.tokenActual)
+
+        job.cancel()
     }
 }
