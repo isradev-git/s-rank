@@ -14,6 +14,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -51,7 +52,12 @@ class RecuperarViewModelTest {
         // ESTA ES LA REGLA. El servidor responde 200 exista o no la cuenta.
         // Si la pantalla se comportara distinto, este endpoint volvería a ser
         // una lista de qué correos están registrados.
-        vm.escribeCorreo("noexiste@ejemplo.es")
+        //
+        // El correo no comparte ni prefijo, ni sufijo, ni dominio con
+        // "existe@ejemplo.es" del test de arriba: si alguna vez la mutación
+        // fuera contains/startsWith/endsWith/dominio en vez de "consulta al
+        // servidor", este test la mata igual. Ver revisión de la tarea 10.
+        vm.escribeCorreo("zoe@otrositio.es")
 
         vm.pideCodigo()
         advanceUntilIdle()
@@ -62,13 +68,15 @@ class RecuperarViewModelTest {
 
     @Test
     fun el_texto_es_el_mismo_en_los_dos_casos() = runTest {
-        vm.escribeCorreo("existe@ejemplo.es")
+        // Mismo motivo que en el test de arriba: los dos correos no
+        // comparten ni prefijo, ni sufijo, ni dominio entre sí.
+        vm.escribeCorreo("ana@ejemplo.es")
         vm.pideCodigo()
         advanceUntilIdle()
         val conCuenta = vm.estado.value.aviso
 
         val otro = RecuperarViewModel(AuthRepositorio(ApiFalsa(), SesionEnMemoria()))
-        otro.escribeCorreo("noexiste@ejemplo.es")
+        otro.escribeCorreo("zoe@otrositio.es")
         otro.pideCodigo()
         advanceUntilIdle()
 
@@ -89,6 +97,10 @@ class RecuperarViewModelTest {
 
         assertEquals(PasoRecuperar.CORREO, vm.estado.value.paso)
         assertEquals("No hay conexión. Comprueba el wifi o los datos.", vm.estado.value.error)
+        // Si cargando se quedara en true, el botón seguiría girando y el
+        // guard de cambiaContrasena()/pideCodigo() bloquearía cualquier
+        // reintento: pantalla muerta sin más salida que matar la app.
+        assertFalse(vm.estado.value.cargando)
     }
 
     @Test

@@ -135,6 +135,12 @@ class RecuperarViewModel(private val auth: AuthRepositorio) : ViewModel() {
                 error = error.mensaje,
             )
         }
+        // ponytail: si el 422 trae un campo que no sea code/password se
+        // pierde en silencio (ni error de campo ni error general). Hoy no es
+        // alcanzable —AuthController::resetPassword solo valida email, code
+        // y password— pero si el servidor gana un campo el día de mañana
+        // hace falta un test nuevo que lo destape antes de que el usuario se
+        // quede sin ningún aviso.
         return copy(
             cargando = false,
             errorCodigo = error.porCampo["code"],

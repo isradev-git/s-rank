@@ -73,9 +73,9 @@ fun PantallaRecuperar(
                     cargando = estado.cargando, modifier = Modifier.fillMaxWidth(),
                 )
 
-                if (estado.error != null) {
+                estado.error?.let { mensaje ->
                     Spacer(Modifier.height(12.dp))
-                    Text(estado.error!!, style = SRank.texto.cuerpo, color = SRank.color.rojo)
+                    Text(mensaje, style = SRank.texto.cuerpo, color = SRank.color.rojo)
                 }
             }
         }
