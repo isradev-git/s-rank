@@ -4,7 +4,6 @@ import es.israelzamora.srank.session.Sesion
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -38,8 +37,12 @@ object SesionExpirada {
  *
  * `Accept: application/json` **no es opcional**: sin ella el servidor devuelve
  * HTML en los errores y el traductor no puede leer el cuerpo.
+ *
+ * `internal` en vez de `private` solo para que `InterceptorSrankTest`, en el
+ * mismo módulo, pueda instanciarlo directamente sin `MockWebServer`. Sigue
+ * sin salir de `data/api`: ningún otro módulo lo ve.
  */
-private class InterceptorSrank(private val sesion: Sesion) : Interceptor {
+internal class InterceptorSrank(private val sesion: Sesion) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
 
@@ -71,7 +74,7 @@ fun creaApi(sesion: Sesion, urlBase: String = URL_BASE): ApiSrank {
         .baseUrl(urlBase)
         .client(cliente)
         .addConverterFactory(
-            (jsonSrank as Json).asConverterFactory("application/json".toMediaType()),
+            jsonSrank.asConverterFactory("application/json".toMediaType()),
         )
         .build()
         .create(ApiSrank::class.java)
