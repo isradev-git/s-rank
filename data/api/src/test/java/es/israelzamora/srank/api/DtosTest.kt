@@ -70,4 +70,23 @@ class DtosTest {
         assertEquals("Israel", r.userName)
         assertEquals(false, r.isAdmin)
     }
+
+    @Test
+    fun deserializa_el_perfil_con_los_modulos_como_lista() {
+        // config('srank.modules') en el backend es un array indexado de PHP
+        // (['entrenamiento', 'nutrición']), no un array asociativo, así que
+        // json_encode lo manda como lista JSON, no como objeto.
+        // Ver backend/config/srank.php:42.
+        val crudo = """
+            {"progress":{"level":4,"rank":"E","xp_total":1240,"xp_into_level":240,
+             "xp_for_next":400,"current_streak":12,"longest_streak":30,
+             "stats":{"strength":3,"endurance":5,"consistency":8,"vitality":2}},
+             "modules":["entrenamiento","nutrición"]}
+        """.trimIndent()
+
+        val p = jsonSrank.decodeFromString<PerfilDto>(crudo)
+
+        assertEquals(4, p.progress.level)
+        assertEquals(listOf("entrenamiento", "nutrición"), p.modules)
+    }
 }

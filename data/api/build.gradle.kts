@@ -14,6 +14,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":data:session"))
+
     api(libs.kotlinx.serialization.json)
     api(libs.retrofit)
     implementation(libs.retrofit.serialization)

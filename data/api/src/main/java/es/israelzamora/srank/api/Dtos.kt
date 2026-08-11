@@ -96,6 +96,18 @@ data class HoyDto(
     @SerialName("suggested_workout") val suggestedWorkout: SugerenciaDto? = null,
 )
 
+/**
+ * `modules` es `config('srank.modules')` en el backend: un array indexado de
+ * PHP (`['entrenamiento', 'nutrición']`), no asociativo, así que
+ * `json_encode` lo manda como lista JSON, nunca como objeto. Ver
+ * `backend/config/srank.php:42`.
+ */
+@Serializable
+data class PerfilDto(
+    val progress: ProgresoDto,
+    val modules: List<String> = emptyList(),
+)
+
 // ── errores de Laravel ────────────────────────────────────────────────────
 
 @Serializable
