@@ -17,6 +17,10 @@ android {
 
     buildTypes {
         release {
+            // ponytail: sin R8. El techo es el tamaño del APK, que en 1.1 no
+            // importa porque no se publica. Si algún día esto va a Play
+            // Store, se activa y se escriben las reglas de kotlinx.serialization
+            // que R8 necesita para no romper la reflexión de los DTO.
             isMinifyEnabled = false
         }
     }
@@ -38,5 +42,16 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
 
+    implementation(project(":core:ui"))
+    implementation(project(":core:system"))
+    implementation(project(":data:api"))
+    implementation(project(":data:session"))
+    implementation(project(":feature:auth"))
+
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

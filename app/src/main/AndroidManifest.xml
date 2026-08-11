@@ -3,7 +3,14 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        ponytail: allowBackup="false" a propósito. La copia automática de
+        Android se llevaría el token de sesión a Google Drive. El techo es
+        que el usuario pierde la sesión al cambiar de móvil o reinstalar,
+        pero se recupera entrando otra vez, que cuesta menos que ese riesgo.
+    -->
     <application
+        android:name=".Aplicacion"
         android:allowBackup="false"
         android:label="S-RANK"
         android:supportsRtl="false"
