@@ -210,4 +210,23 @@ class RecuperarViewModelTest {
 
         assertTrue(vm.estado.value.cambiada)
     }
+
+    @Test
+    fun cada_campo_llega_al_servidor_en_su_sitio_y_no_cruzado() = runTest {
+        // Mismo motivo que en registro: sin comprobar la petición de verdad,
+        // un correo/código/contraseña cruzados en
+        // AuthRepositorio.cambiaContrasena pasarían este test igual.
+        vm.escribeCorreo("existe@ejemplo.es")
+        vm.pideCodigo()
+        advanceUntilIdle()
+        vm.escribeCodigo("123456")
+        vm.escribeContrasena("micontrasenanueva")
+
+        vm.cambiaContrasena()
+        advanceUntilIdle()
+
+        assertEquals("existe@ejemplo.es", api.ultimaPeticionReset?.email)
+        assertEquals("123456", api.ultimaPeticionReset?.code)
+        assertEquals("micontrasenanueva", api.ultimaPeticionReset?.password)
+    }
 }

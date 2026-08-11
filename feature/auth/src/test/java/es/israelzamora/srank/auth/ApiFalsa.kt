@@ -28,6 +28,16 @@ open class ApiFalsa : ApiSrank {
     var ultimoCorreoOlvido: String? = null
         private set
 
+    /**
+     * La petición completa, no solo un campo suelto: sin esto un
+     * `nombre`↔`correo` cruzado en `AuthRepositorio.registrar` pasaría la
+     * suite entera, porque ningún test comprobaba qué llegaba a la red.
+     */
+    var ultimaPeticionRegistro: RegistroPeticionDto? = null
+        private set
+    var ultimaPeticionReset: ResetPeticionDto? = null
+        private set
+
     var respuestaLogin: () -> LoginRespuestaDto = {
         LoginRespuestaDto("42|abcdef", "Bearer", "Israel", false)
     }
@@ -49,6 +59,7 @@ open class ApiFalsa : ApiSrank {
 
     override suspend fun registro(peticion: RegistroPeticionDto): LoginRespuestaDto {
         vecesRegistro++
+        ultimaPeticionRegistro = peticion
         return respuestaRegistro()
     }
 
@@ -58,7 +69,10 @@ open class ApiFalsa : ApiSrank {
         return respuestaOlvide()
     }
 
-    override suspend fun cambiaContrasena(peticion: ResetPeticionDto) = respuestaReset()
+    override suspend fun cambiaContrasena(peticion: ResetPeticionDto): MensajeDto {
+        ultimaPeticionReset = peticion
+        return respuestaReset()
+    }
 
     override suspend fun salir() = MensajeDto("Sesión cerrada correctamente.")
 

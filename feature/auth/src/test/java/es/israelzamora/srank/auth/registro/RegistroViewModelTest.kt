@@ -56,6 +56,21 @@ class RegistroViewModelTest {
     }
 
     @Test
+    fun cada_campo_llega_al_servidor_en_su_sitio_y_no_cruzado() = runTest {
+        // Sin comprobar la petición de verdad, un nombre↔correo cruzado en
+        // AuthRepositorio.registrar pasaría este mismo test igual: entrado
+        // no depende de qué campo llevaba qué valor.
+        rellenaBien()
+
+        vm.registrar()
+        advanceUntilIdle()
+
+        assertEquals("Israel", api.ultimaPeticionRegistro?.name)
+        assertEquals("nuevo@ejemplo.es", api.ultimaPeticionRegistro?.email)
+        assertEquals("micontrasena", api.ultimaPeticionRegistro?.password)
+    }
+
+    @Test
     fun una_contrasena_corta_se_avisa_antes_de_llamar() = runTest {
         // El registro son 3 por hora. Gastar uno en algo que el servidor va a
         // rechazar seguro deja al usuario una hora fuera.
