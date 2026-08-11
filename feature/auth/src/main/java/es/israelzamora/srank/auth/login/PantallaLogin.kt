@@ -59,6 +59,12 @@ fun PantallaLogin(
             cargando = estado.cargando,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        estado.errorGeneral?.let { mensaje ->
+            Spacer(Modifier.height(12.dp))
+            Text(mensaje, style = SRank.texto.cuerpo, color = SRank.color.rojo)
+        }
+
         Spacer(Modifier.height(24.dp))
 
         Enlace("no recuerdo mi contraseña", alOlvidar)

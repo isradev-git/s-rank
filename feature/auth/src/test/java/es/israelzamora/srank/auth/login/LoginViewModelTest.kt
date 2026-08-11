@@ -99,8 +99,9 @@ class LoginViewModelTest {
 
         assertEquals(
             "Demasiados intentos. Espera un momento y vuelve a probar.",
-            vm.estado.value.error,
+            vm.estado.value.errorGeneral,
         )
+        assertNull(vm.estado.value.error)
     }
 
     @Test
@@ -112,7 +113,11 @@ class LoginViewModelTest {
         vm.entrar()
         advanceUntilIdle()
 
-        assertEquals("No hay conexión. Comprueba el wifi o los datos.", vm.estado.value.error)
+        assertEquals(
+            "No hay conexión. Comprueba el wifi o los datos.",
+            vm.estado.value.errorGeneral,
+        )
+        assertNull(vm.estado.value.error)
         assertFalse(vm.estado.value.cargando)
     }
 
@@ -124,19 +129,56 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, api.vecesLogin)
-        assertEquals("Escribe tu correo y tu contraseña.", vm.estado.value.error)
+        assertEquals("Escribe tu correo y tu contraseña.", vm.estado.value.errorGeneral)
+        assertNull(vm.estado.value.error)
     }
 
     @Test
-    fun al_escribir_otra_vez_desaparece_el_error_anterior() = runTest {
-        api.respuestaLogin = { throw httpError(429, """{"message":"Too Many Attempts."}""") }
+    fun al_escribir_otra_vez_desaparece_el_error_de_campo_anterior() = runTest {
+        api.respuestaLogin = {
+            throw httpError(
+                422,
+                """{"message":"Credenciales incorrectas.",
+                    "errors":{"email":["Credenciales incorrectas."]}}""",
+            )
+        }
         vm.escribeCorreo("hola@ejemplo.es")
-        vm.escribeContrasena("micontrasena")
+        vm.escribeContrasena("mala")
         vm.entrar()
         advanceUntilIdle()
 
         vm.escribeContrasena("otra")
 
         assertNull(vm.estado.value.error)
+    }
+
+    @Test
+    fun un_429_tras_un_422_no_deja_los_dos_avisos_a_la_vez() = runTest {
+        // Mismo fallo real que tuvo RegistroViewModel en la tarea 9: si las
+        // dos banderas no se dejan explícitas en cada rama, el error de
+        // campo del primer intento se queda pegado en pantalla junto al
+        // general del segundo.
+        api.respuestaLogin = {
+            throw httpError(
+                422,
+                """{"message":"Credenciales incorrectas.",
+                    "errors":{"email":["Credenciales incorrectas."]}}""",
+            )
+        }
+        vm.escribeCorreo("hola@ejemplo.es")
+        vm.escribeContrasena("mala")
+        vm.entrar()
+        advanceUntilIdle()
+        assertEquals("Credenciales incorrectas.", vm.estado.value.error)
+
+        api.respuestaLogin = { throw httpError(429, """{"message":"Too Many Attempts."}""") }
+        vm.entrar()
+        advanceUntilIdle()
+
+        assertEquals(
+            "Demasiados intentos. Espera un momento y vuelve a probar.",
+            vm.estado.value.errorGeneral,
+        )
+        assertNull("el error de campo del intento anterior no debe seguir puesto", vm.estado.value.error)
     }
 }

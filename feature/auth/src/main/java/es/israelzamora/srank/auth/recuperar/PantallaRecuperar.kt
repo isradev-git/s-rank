@@ -37,7 +37,7 @@ fun PantallaRecuperar(
 
                 CampoSRank(
                     estado.correo, vm::escribeCorreo, "correo",
-                    error = estado.error, tecladoCorreo = true,
+                    tecladoCorreo = true,
                 )
                 Spacer(Modifier.height(24.dp))
 
@@ -45,6 +45,11 @@ fun PantallaRecuperar(
                     "enviar código", vm::pideCodigo,
                     cargando = estado.cargando, modifier = Modifier.fillMaxWidth(),
                 )
+
+                estado.error?.let { mensaje ->
+                    Spacer(Modifier.height(12.dp))
+                    Text(mensaje, style = SRank.texto.cuerpo, color = SRank.color.rojo)
+                }
             }
 
             PasoRecuperar.CODIGO -> {
