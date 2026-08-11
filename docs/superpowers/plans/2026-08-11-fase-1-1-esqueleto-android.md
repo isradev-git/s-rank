@@ -201,7 +201,7 @@ datastore = "1.2.1"
 navigation = "2.9.8"
 lifecycle = "2.11.0"
 activity = "1.13.0"
-coreKtx = "1.19.0"
+coreKtx = "1.18.0"   # 1.19.0 exige compileSdk 37; ver la nota de abajo
 junit = "4.13.2"
 
 [libraries]
