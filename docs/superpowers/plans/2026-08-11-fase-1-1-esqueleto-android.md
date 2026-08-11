@@ -516,11 +516,11 @@ La fuente ya está descargada en `/tmp/jbmono`. Cópiala con el nombre que exige
 (minúsculas y guiones bajos):
 
 ```bash
-mkdir -p core/ui/src/main/res/font
+mkdir -p core/ui/src/main/res/font core/ui/src/main/assets/font
 cp /tmp/jbmono/fonts/ttf/JetBrainsMono-Regular.ttf core/ui/src/main/res/font/jetbrains_mono_regular.ttf
 cp /tmp/jbmono/fonts/ttf/JetBrainsMono-Bold.ttf    core/ui/src/main/res/font/jetbrains_mono_bold.ttf
-cp /tmp/jbmono/OFL.txt                             core/ui/src/main/res/font/LICENCIA-JetBrainsMono.txt
-ls -la core/ui/src/main/res/font/
+cp /tmp/jbmono/OFL.txt                             core/ui/src/main/assets/font/LICENCIA-JetBrainsMono.txt
+ls -la core/ui/src/main/res/font/ core/ui/src/main/assets/font/
 ```
 
 Si `/tmp/jbmono` ya no existe:
@@ -531,8 +531,13 @@ cd /tmp && curl -sL -o jbmono.zip \
   && unzip -q -o jbmono.zip -d jbmono
 ```
 
-> La licencia va al lado del TTF a propósito: JetBrains Mono es SIL OFL y la licencia tiene
-> que viajar con la fuente.
+> La licencia viaja empaquetada a propósito: JetBrains Mono es SIL OFL y la cláusula 2 pide
+> que la licencia acompañe a la fuente redistribuida.
+>
+> Va en `assets/font/` y no en `res/font/`, aunque quede menos al lado del TTF: aapt2
+> rechaza en `res/font/` cualquier fichero que no acabe en `.ttf`, `.ttc`, `.otf` o `.xml`,
+> y el módulo no compila. `res/raw/` tampoco vale sin renombrar, porque exige minúsculas y
+> guiones bajos. Los assets se empaquetan igual en el AAR y en el APK.
 
 - [ ] **Paso 2: Escribir el test de contraste, que es el que protege los colores**
 
