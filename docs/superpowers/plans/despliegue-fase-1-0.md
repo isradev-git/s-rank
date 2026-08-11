@@ -91,34 +91,77 @@ Comprobado contra el servidor después de subir:
 | Límite de intentos | vivo: `x-ratelimit-limit: 5` |
 | Cabeceras | HSTS un año, `X-Frame-Options`, `X-Content-Type-Options` |
 
-Lo único que no se pudo comprobar desde fuera es la respuesta de un login **correcto**,
-que es donde vivía la cookie: hace falta una cuenta real y una contraseña no se escribe en
-una conversación. El código ya no la emite y ninguna otra respuesta trae `Set-Cookie`.
+Faltaba por comprobar la respuesta de un login **correcto**, que es donde vivía la
+cookie: hace falta una cuenta real y una contraseña no se escribe en una conversación.
+Eso y el resto de lo pendiente se cerró al día siguiente.
 
-⚠️ El FTP sobrescribe pero no borra: `app/Http/Middleware/EnsureAuthenticated.php` sigue
-en el servidor si no se ha borrado a mano. No lo referencia nada, pero es la vía de la
-cookie esperando a que alguien la reenganche.
+## Verificado el 11 de agosto, con una cuenta de verdad
 
-## Sigue pendiente
+Lo que quedaba abierto necesitaba poder entrar. En vez de reutilizar la contraseña
+temporal de `hola@israelzamora.es`, que vivía en el historial de un chat que ni caduca ni
+se puede retirar, la cuenta **se borró y se volvió a crear**. No tenía ni un dato: no está
+en `srank-inicial.sql`, se había creado probando el despliegue. El borrado fue por
+phpMyAdmin, en dos sentencias:
 
-**`hola@israelzamora.es` conserva la contraseña temporal.** Se escribió en una
-conversación de la fase 1.0, así que vive en un historial de chat que ni caduca ni se
-puede retirar, y da acceso a datos de salud reales. No está en el repositorio —se
-comprobó— pero eso no la hace menos válida. Se cambia desde la propia API:
+```sql
+DELETE FROM personal_access_tokens
+ WHERE tokenable_type = 'App\\Models\\User'
+   AND tokenable_id = (SELECT id FROM users WHERE email = 'hola@israelzamora.es');
 
+DELETE FROM users WHERE email = 'hola@israelzamora.es';
 ```
-PUT /api/user/password
-{ current_password, new_password, new_password_confirmation }
-```
 
-Hace falta el token de una sesión iniciada, así que primero se entra con la temporal.
-`changePassword` borra todos los tokens del usuario al terminar, o sea que el cambio
-invalida por sí solo cualquier sesión emitida con la contraseña vieja. No hay que tocar
-nada en phpMyAdmin.
+Las dos, en ese orden. Todo lo del usuario cae solo —las migraciones declaran
+`cascadeOnDelete` y MySQL las respeta—, **menos los tokens**: `personal_access_tokens` usa
+`morphs()`, que no lleva clave ajena. Sin la primera sentencia quedan filas huérfanas. No
+autentican a nadie, porque Sanctum resuelve el usuario y le sale nulo, pero son basura.
 
-La otra vía es `forgot-password` + `reset-password`, que además prueba de paso que el
-correo saliente funciona. Dos pájaros de un tiro, porque ese envío tampoco se ha
-verificado desde el despliegue.
+La contraseña de la cuenta recreada no se escribió en ninguna conversación. Cuando haga
+falta entrar, se pide con `forgot-password`.
+
+| Comprobación | Resultado |
+|---|---|
+| El **mismo** token, por `Authorization: Bearer` | 200 |
+| El **mismo** token, solo como cookie `fitloop_token` | 401 |
+| Otros nombres de cookie (`token`, `auth_token`, `laravel_session`) | 401 |
+| Login **correcto** | 200, y ni una `Set-Cookie` |
+| Cuerpo del login | solo `access_token`, `token_type`, `user_name`, `is_admin` |
+| El código de seis cifras llega al buzón | sí |
+| `reset-password` con el código | 200, y el token de la sesión abierta pasa a 401 |
+| Reutilizar el mismo código | 422, en español |
+
+La cookie es la comprobación que importa, y hay que hacerla así: **el mismo token que da
+200 por cabecera tiene que dar 401 por cookie**. Mandar una cookie inventada devuelve 401
+igual que no mandar nada, así que no demuestra nada.
+
+`app/Http/Middleware/EnsureAuthenticated.php` se borró a mano del servidor. El FTP
+sobrescribe pero no borra, así que había sobrevivido al despliegue que lo quitó del
+repositorio. Nada lo referenciaba, pero era la vía de la cookie esperando a que alguien la
+reenganchara.
+
+## La fuga que solo se ve con un cronómetro
+
+`forgot-password` responde lo mismo exista o no el correo, y lo cumple palabra por
+palabra. Cronometrado no lo cumplía en absoluto:
+
+| | Antes | Después del arreglo |
+|---|---|---|
+| Correo registrado | 1,178 s | 0,492 s · 0,442 s |
+| Correo desconocido | 0,186 s | 0,426 s |
+| Diferencia | **0,992 s** | ~0,04 s |
+
+Un segundo de diferencia distingue una cuenta registrada de una que no lo está, con una
+sola petición y sin margen de duda. Es la misma fuga que se tapó en `login()` con
+`HASH_SENUELO`, pero mucho mayor: allí eran milisegundos de bcrypt, aquí el saludo al SMTP
+entero. La rama que no encuentra usuario no hacía nada y volvía enseguida.
+
+Arreglado en `AuthController::forgotPassword()` por las dos causas a la vez: el envío del
+correo sale de la petición con `app()->terminating()` —sin cola ni worker, que en Ginernet
+no hay— y la rama del correo desconocido paga un bcrypt señuelo. Los 40 ms que quedan son
+menores que la variación entre dos peticiones idénticas, que se llevan 50 ms entre sí.
+
+Se subió por FTP el fichero suelto: un controlador no está cacheado, así que surte efecto
+en la siguiente petición sin tocar nada más.
 
 ## Recordatorio
 

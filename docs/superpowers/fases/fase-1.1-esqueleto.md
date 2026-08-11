@@ -124,6 +124,12 @@ un mensaje distinto para cada caso: reintroducirías la fuga desde el cliente.
 Son por IP. Al desarrollar te los vas a comer. El contador vive en la tabla `cache` de
 MySQL; `DELETE FROM cache;` lo reinicia sin tocar ningún dato.
 
+⚠️ **El 429 llega en inglés**: `{"message":"Too Many Attempts."}`. Lo emite el limitador de
+Laravel antes de entrar en la ruta, así que no pasa por `lang/es` y no se puede traducir
+desde el servidor sin tocar el limitador. **La app tiene que poner su propio texto**, algo
+como «Demasiados intentos. Espera un momento y vuelve a probar». Es el único mensaje de la
+API que no viene ya en castellano.
+
 ## Restricciones
 
 **La estética es decoración.** El `$`, los `//` y los `[✓]` van encima de listas y botones
