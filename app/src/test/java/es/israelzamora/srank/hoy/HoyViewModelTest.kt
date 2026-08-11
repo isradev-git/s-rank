@@ -114,6 +114,34 @@ class HoyViewModelTest {
     }
 
     @Test
+    fun si_ya_habia_datos_una_recarga_fallida_no_los_borra_pero_avisa() = runTest {
+        // El orden del `when` de PantallaHoy está pensado para esto: «si ya
+        // hay datos se enseñan aunque una recarga falle». Sin este test el
+        // caso no se ejercitaba nunca, y el estado hoy != null && error !=
+        // null a la vez —que carga() sí produce— se tragaba en silencio en
+        // la pantalla.
+        var falla = false
+        val api = ApiHoyFalsa {
+            if (falla) throw UnknownHostException("s-rank")
+            else jsonSrank.decodeFromString(RESPUESTA_HOY)
+        }
+        val vm = vmCon(api)
+        vm.carga()
+        advanceUntilIdle()
+
+        falla = true
+        vm.carga()
+        advanceUntilIdle()
+
+        val estado = vm.estado.value
+        assertEquals("los datos ya cargados no deben perderse", 4, estado.hoy?.progreso?.nivel)
+        assertEquals(
+            "No hay conexión. Comprueba el wifi o los datos.",
+            estado.error,
+        )
+    }
+
+    @Test
     fun plegar_la_seccion_no_borra_lo_cargado() = runTest {
         val api = ApiHoyFalsa { jsonSrank.decodeFromString(RESPUESTA_HOY) }
         val vm = vmCon(api)
