@@ -30,7 +30,9 @@ fun PantallaRegistro(
     }
 
     MarcoAuth("crear cuenta") {
-        Comentario("la contraseña necesita 8 caracteres como mínimo")
+        // La regla de los 8 caracteres es toda la información: va como dato,
+        // no como etiqueta apagada (spec §5.3).
+        Comentario("", dato = "la contraseña necesita 8 caracteres como mínimo")
         Spacer(Modifier.height(24.dp))
 
         CampoSRank(estado.nombre, vm::escribeNombre, "nombre", error = estado.errorNombre)

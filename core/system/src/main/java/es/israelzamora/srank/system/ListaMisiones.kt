@@ -35,7 +35,9 @@ fun ListaMisiones(
         AnimatedVisibility(visible = desplegada) {
             Column {
                 if (misiones.isEmpty()) {
-                    Comentario("hoy no hay misiones")
+                    // El aviso es toda la información: va como dato, no
+                    // como etiqueta apagada (spec §5.3).
+                    Comentario("", dato = "hoy no hay misiones")
                 } else {
                     misiones.forEach {
                         FilaMision(

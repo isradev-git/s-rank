@@ -30,7 +30,9 @@ fun CabeceraProgreso(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        Comentario(dia)
+        // La fecha es toda la información, no una etiqueta decorativa: va
+        // como dato para leerse a 16,55:1, no a 2,72:1 (spec §5.3).
+        Comentario("", dato = dia)
         Spacer(Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {

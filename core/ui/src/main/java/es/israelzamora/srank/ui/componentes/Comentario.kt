@@ -18,6 +18,14 @@ import es.israelzamora.srank.ui.theme.SRankTheme
  * es decoración) y el dato en texto (16,55:1, que se lee). Sigue leyéndose como
  * comentario porque lo dicen el marcador y el tamaño, no el gris.
  *
+ * `texto` vacío es válido y a propósito: es la forma de partir el color
+ * cuando el dato **es** toda la información (spec §5.3, «un comentario que
+ * lleva información parte el color») y no hay ningún rótulo apagado que
+ * anteponerle — la fecha del día, «hoy no hay misiones», la regla de los 8
+ * caracteres del registro. Sin este caso especial, `Comentario("", dato = X)`
+ * pintaba `"// " + "" + " X"`, con un espacio de sobra antes de `X` que venía
+ * del `Text(" $dato")` de más abajo.
+ *
  * Para TalkBack se anuncia solo el contenido: las dos barras son dibujo.
  */
 @Composable
@@ -26,7 +34,7 @@ fun Comentario(
     dato: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    val leido = if (dato == null) texto else "$texto $dato"
+    val leido = leidoComentario(texto, dato)
 
     Row(
         modifier.clearAndSetSemantics { text = AnnotatedString(leido) },
@@ -36,21 +44,35 @@ fun Comentario(
             style = SRank.texto.nota,
             color = SRank.color.apagado,
         )
-        Text(
-            text = texto,
-            style = SRank.texto.nota,
-            // Sin dato, el comentario entero es secundario y puede ir apagado.
-            // Con dato, el texto de delante lo acompaña y también es secundario.
-            color = SRank.color.apagado,
-        )
+        if (texto.isNotEmpty()) {
+            Text(
+                text = texto,
+                style = SRank.texto.nota,
+                // Sin dato, el comentario entero es secundario y puede ir
+                // apagado. Con dato, el texto de delante lo acompaña y
+                // también es secundario.
+                color = SRank.color.apagado,
+            )
+        }
         if (dato != null) {
             Text(
-                text = " $dato",
+                text = if (texto.isEmpty()) dato else " $dato",
                 style = SRank.texto.nota,
                 color = SRank.color.texto,
             )
         }
     }
+}
+
+/**
+ * Lo que anuncia TalkBack, sin las dos barras de dibujo. Función aparte y
+ * `internal` para poder fijarla con un test normal, sin infraestructura de
+ * Compose — ver `ComentarioTest`.
+ */
+internal fun leidoComentario(texto: String, dato: String?): String = when {
+    dato == null -> texto
+    texto.isEmpty() -> dato
+    else -> "$texto $dato"
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
