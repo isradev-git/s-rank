@@ -60,6 +60,11 @@ class LoginViewModelTest {
         assertTrue(vm.estado.value.entrado)
         assertNull(vm.estado.value.error)
         assertEquals("42|abcdef", sesion.token.first())
+        // Sin comprobar la petición de verdad, un correo↔contraseña cruzado
+        // en AuthRepositorio.entrar pasaría este mismo test igual: entrado
+        // no depende de qué campo llevaba qué valor.
+        assertEquals("hola@ejemplo.es", api.ultimaPeticionLogin?.email)
+        assertEquals("micontrasena", api.ultimaPeticionLogin?.password)
     }
 
     @Test

@@ -14,6 +14,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import es.israelzamora.srank.ui.theme.SRank
 import es.israelzamora.srank.ui.theme.SRankTheme
 
+/** Cuántos bloques tiene la barra. Un solo sitio: ver `bloquesEncendidos` y `BarraBloques`. */
+private const val BLOQUES = 10
+
 /**
  * Cuántos de los diez bloques están encendidos.
  *
@@ -29,8 +32,7 @@ import es.israelzamora.srank.ui.theme.SRankTheme
  */
 fun bloquesEncendidos(progreso: Int, total: Int): Int {
     if (total <= 0 || progreso <= 0) return 0
-    val bloques = 10
-    val encendidos = (progreso.toLong() * bloques / total).coerceIn(0L, bloques.toLong())
+    val encendidos = (progreso.toLong() * BLOQUES / total).coerceIn(0L, BLOQUES.toLong())
     return encendidos.toInt()
 }
 
@@ -53,7 +55,6 @@ fun BarraBloques(
     modifier: Modifier = Modifier,
     color: Color = SRank.color.ambar,
 ) {
-    val bloques = 10
     val llenos = bloquesEncendidos(progreso, total)
     // Mismo desbordamiento que en bloquesEncendidos: se acota en Long antes
     // de convertir a Int, no después.
@@ -62,7 +63,7 @@ fun BarraBloques(
     val pintada = buildAnnotatedString {
         withStyle(SpanStyle(color = SRank.color.apagado)) { append("[") }
         withStyle(SpanStyle(color = color)) { append("▓".repeat(llenos)) }
-        withStyle(SpanStyle(color = SRank.color.lineas)) { append("░".repeat(bloques - llenos)) }
+        withStyle(SpanStyle(color = SRank.color.lineas)) { append("░".repeat(BLOQUES - llenos)) }
         withStyle(SpanStyle(color = SRank.color.apagado)) { append("]") }
     }
 

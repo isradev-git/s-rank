@@ -33,6 +33,8 @@ open class ApiFalsa : ApiSrank {
      * `nombre`↔`correo` cruzado en `AuthRepositorio.registrar` pasaría la
      * suite entera, porque ningún test comprobaba qué llegaba a la red.
      */
+    var ultimaPeticionLogin: LoginPeticionDto? = null
+        private set
     var ultimaPeticionRegistro: RegistroPeticionDto? = null
         private set
     var ultimaPeticionReset: ResetPeticionDto? = null
@@ -54,6 +56,7 @@ open class ApiFalsa : ApiSrank {
 
     override suspend fun login(peticion: LoginPeticionDto): LoginRespuestaDto {
         vecesLogin++
+        ultimaPeticionLogin = peticion
         return respuestaLogin()
     }
 

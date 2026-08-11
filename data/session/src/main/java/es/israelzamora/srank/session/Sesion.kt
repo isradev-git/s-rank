@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import java.io.IOException
 
 /**
  * Dónde vive la sesión.
@@ -62,15 +63,21 @@ class SesionDataStore(private val context: Context) : Sesion {
     // la pantalla de carga para siempre. Tratar el fichero corrupto como
     // vacío es lo mismo que hace DataStore internamente para un fichero que
     // no existe todavía.
+    //
+    // Solo `IOException`, que es lo que documenta DataStore para ese caso:
+    // si se capturase cualquier `Throwable`, un fallo que no sea de disco
+    // (un bug, una `IllegalStateException`) se convertiría en "no hay
+    // sesión" y sacaría al usuario a login en silencio, en vez de fallar de
+    // forma ruidosa y visible.
     override val token: Flow<String?> =
         context.almacen.data
-            .catch { emit(emptyPreferences()) }
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
             .map { it[CLAVE_TOKEN] }
             .onEach { tokenActual = it }
 
     override val nombre: Flow<String?> =
         context.almacen.data
-            .catch { emit(emptyPreferences()) }
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
             .map { it[CLAVE_NOMBRE] }
 
     override suspend fun guarda(token: String, nombre: String) {
