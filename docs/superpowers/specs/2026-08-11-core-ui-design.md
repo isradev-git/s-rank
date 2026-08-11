@@ -271,7 +271,7 @@ hace falta saber qué significa.
    ▔▔▔
 ─────────────────────────────────
  $ hoy
- // lunes, 11 de agosto
+ // martes, 11 de agosto
 
  NIVEL 4              RANGO  E
  [▓▓▓▓▓▓░░░░]
