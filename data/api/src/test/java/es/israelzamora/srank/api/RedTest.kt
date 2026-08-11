@@ -7,10 +7,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.io.IOException
 
 class RedTest {
@@ -62,6 +65,31 @@ class RedTest {
     @Test
     fun creaApi_construye_la_interfaz_sin_reventar() {
         val api = creaApi(SesionEnMemoria(), "http://localhost/")
+
+        assertNotNull(api)
+    }
+
+    /**
+     * `creaApi_construye_la_interfaz_sin_reventar` solo comprueba que el
+     * `Retrofit.create()` no da null. No basta: Retrofit por defecto valida
+     * cada anotación **la primera vez que se llama a ese método**, no al
+     * crear la interfaz, así que un `@Body` mal puesto o una ruta sin `/`
+     * inicial en uno de los ocho endpoints de `ApiSrank` podría pasar la
+     * suite entera sin que nadie lo llamase — la misma lección que costó
+     * meses con `/informe-salud` en el backend (ver CLAUDE.md, «lo que no
+     * tiene test no lo cubre nadie»). `validateEagerly(true)` mueve esa
+     * validación a la construcción, así que este test la ejercita sobre las
+     * ocho de golpe sin tener que llamarlas una a una.
+     */
+    @Test
+    fun con_validacion_eager_las_ocho_anotaciones_de_apisrank_son_validas() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://localhost/")
+            .addConverterFactory(jsonSrank.asConverterFactory("application/json".toMediaType()))
+            .validateEagerly(true)
+            .build()
+
+        val api = retrofit.create(ApiSrank::class.java)
 
         assertNotNull(api)
     }
