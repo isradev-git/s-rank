@@ -35,4 +35,12 @@ class BarraBloquesTest {
         // sería una excepción en mitad de la pantalla de hoy.
         assertEquals(0, bloquesEncendidos(progreso = 10, total = 0))
     }
+
+    @Test
+    fun no_desborda_con_progreso_cerca_del_maximo_de_int() {
+        // progreso.toLong() * bloques se queda en Long, pero volver a Int sin
+        // acotar antes desborda: 2_147_483_647 * 10 / 1 da -10, que coerceIn
+        // deja en 0. Una barra vacía cuando en realidad está llena de sobra.
+        assertEquals(10, bloquesEncendidos(progreso = Int.MAX_VALUE, total = 1))
+    }
 }

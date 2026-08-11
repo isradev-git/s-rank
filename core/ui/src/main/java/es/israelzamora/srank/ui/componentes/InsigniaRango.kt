@@ -25,6 +25,11 @@ import es.israelzamora.srank.ui.theme.SRankTheme
 @Composable
 fun InsigniaRango(rango: String, modifier: Modifier = Modifier) {
     val color: Color = when (rango.uppercase()) {
+        // ponytail: el rango E va en apagado (2,72:1), por debajo del mínimo
+        // que pide la regla de que apagado nunca lleve la única copia de un
+        // dato. Se salva porque la insignia nunca va sola —al lado siempre
+        // hay «NIVEL n» en texto— y el rango se anuncia entero por TalkBack.
+        // El techo: si en el móvil se lee mal, sube a texto.
         "E" -> SRank.color.apagado
         "D" -> SRank.color.texto
         "C" -> SRank.color.azul

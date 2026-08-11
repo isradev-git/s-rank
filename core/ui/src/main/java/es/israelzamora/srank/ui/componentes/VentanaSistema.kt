@@ -43,6 +43,11 @@ fun VentanaSistema(
             color = SRank.color.cian,
         )
         Text(
+            // ponytail: separador de ancho fijo, la única alineación por
+            // caracteres de todo el proyecto. El techo: con la fuente del
+            // sistema al máximo se sale del marco. Si pasa, se cambia por un
+            // Divider de 1 dp, que es lo correcto y no hace falta hasta que
+            // la ventana se use de verdad en la fase 1.2.
             text = "─".repeat(24),
             style = SRank.texto.nota,
             color = SRank.color.cian,

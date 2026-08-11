@@ -20,11 +20,17 @@ import es.israelzamora.srank.ui.theme.SRankTheme
  * Trunca en vez de redondear: 399 de 400 son nueve bloques, no diez. Enseñar
  * la barra llena cuando todavía falta XP sería mentir en la única pantalla
  * donde el número importa.
+ *
+ * `progreso.toLong() * bloques` no desborda, pero volver a `Int` sí lo hacía
+ * si se acotaba después: con `progreso` cerca de `Int.MAX_VALUE` el
+ * resultado en `Long` no cabe en 32 bits y `.toInt()` da un número negativo
+ * (el `coerceIn` de después no salva nada porque ya truncó mal). Se acota en
+ * `Long` antes de convertir, no después.
  */
 fun bloquesEncendidos(progreso: Int, total: Int, bloques: Int = 10): Int {
     if (total <= 0 || progreso <= 0) return 0
-    val encendidos = (progreso.toLong() * bloques / total).toInt()
-    return encendidos.coerceIn(0, bloques)
+    val encendidos = (progreso.toLong() * bloques / total).coerceIn(0L, bloques.toLong())
+    return encendidos.toInt()
 }
 
 /**
@@ -48,7 +54,9 @@ fun BarraBloques(
 ) {
     val bloques = 10
     val llenos = bloquesEncendidos(progreso, total, bloques)
-    val porcentaje = if (total <= 0) 0 else (progreso.toLong() * 100 / total).toInt().coerceIn(0, 100)
+    // Mismo desbordamiento que en bloquesEncendidos: se acota en Long antes
+    // de convertir a Int, no después.
+    val porcentaje = if (total <= 0) 0 else (progreso.toLong() * 100 / total).coerceIn(0L, 100L).toInt()
 
     val pintada = buildAnnotatedString {
         withStyle(SpanStyle(color = SRank.color.apagado)) { append("[") }
