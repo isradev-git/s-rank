@@ -3,9 +3,11 @@ package es.israelzamora.srank.nav
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -94,24 +96,13 @@ internal suspend fun escuchaExpiracion(avisos: Flow<Unit>, sesion: Sesion, alLog
 fun NavRaiz(grafo: Grafo) {
     val nav = rememberNavController()
 
-    // El 401 desde cualquier pantalla: un solo sitio, y colectando desde ya
-    // —antes incluso de saber la ruta inicial—, porque este efecto vive en
-    // el cuerpo de NavRaiz, por encima de cualquier pantalla del NavHost, y
-    // dura tanto como la composición de la app entera. No se cancela al
-    // cambiar de pestaña ni de ruta.
-    LaunchedEffect(Unit) {
-        escuchaExpiracion(SesionExpirada.avisos, grafo.sesion) {
-            nav.navigate(Rutas.LOGIN) { popUpTo(0) }
-        }
-    }
-
     // Contrato 1, la vuelta que dejó abierta la primera versión: esperar el
     // primer valor del token y luego *navegar* no basta. Si el proceso había
     // muerto con «hoy» en el back stack, NavHost restaura esa pantalla
     // durante la composición, antes de que corra ningún LaunchedEffect;
     // HoyViewModel se crea, su `init` dispara la petición, y sale sin
     // Authorization porque tokenActual todavía no se ha rellenado. El 401
-    // que contesta el servidor hace que el colector de arriba borre un
+    // que contesta el servidor hace que el colector de más abajo borre un
     // token válido: el fallo que este contrato existe para impedir, entrando
     // por la puerta de al lado.
     //
@@ -131,6 +122,35 @@ fun NavRaiz(grafo: Grafo) {
         // defecto de la ventana mientras se resuelve la ruta.
         Box(Modifier.fillMaxSize().background(SRank.color.fondo))
         return
+    }
+
+    // El 401 desde cualquier pantalla: un solo sitio. Tiene que ir *después*
+    // del gate de arriba: `NavHost`, más abajo, todavía no ha llamado a
+    // `setGraph()` mientras `rutaInicial` es null, y `nav.navigate()` antes
+    // de eso revienta con «You must call setGraph() before calling
+    // getGraph()». En arranque en frío ese hueco no se nota porque
+    // `decideRutaInicial` resuelve antes de que pueda llegar ningún 401. En
+    // una recreación de Activity sí: el `ViewModelStore` del back stack
+    // sobrevive a la rotación, así que una petición de `HoyViewModel` puede
+    // seguir en vuelo mientras la composición nueva espera a `rutaInicial`,
+    // y si esa petición vuelve con 401 antes de llegar aquí, el aviso se
+    // pierde (el `SharedFlow` de `SesionExpirada` tiene `replay = 0`) en vez
+    // de hacer caer la app.
+    //
+    // ponytail: esa ventana sin colector en cada rotación es el techo de
+    // este arreglo — perder un aviso puntual es preferible a un crash, pero
+    // sigue siendo perder un aviso. No se cierra subiendo `replay` a 1:
+    // reentregaría un aviso viejo a cada composición nueva y echaría al
+    // usuario a login en cada rotación, un fallo peor que el que se evita. El
+    // arreglo de verdad, que es de la fase 1.2 y no de esta: un colector en
+    // `Aplicacion`, con scope de proceso (no de Activity), que solo llame a
+    // `sesion.limpia()`; y que la navegación a login se conduzca observando
+    // `sesion.token` en vez de reaccionar a un aviso puntual que puede pasar
+    // sin nadie escuchando.
+    LaunchedEffect(Unit) {
+        escuchaExpiracion(SesionExpirada.avisos, grafo.sesion) {
+            nav.navigate(Rutas.LOGIN) { popUpTo(0) }
+        }
     }
 
     val entrada by nav.currentBackStackEntryAsState()
@@ -219,11 +239,15 @@ fun NavRaiz(grafo: Grafo) {
  * Fijas y no ocultables: perderlas en un scroll largo es peor que gastar los
  * 48 dp que ocupan.
  *
- * `windowInsetsPadding(WindowInsets.statusBars)`: con `enableEdgeToEdge()` en
- * `MainActivity`, `Scaffold` coloca su `topBar` en (0,0) sin aplicarle
- * ningún inset —lo espera del propio contenido, como hacen los `TopAppBar`
- * de Material 3—, así que sin esto la pestaña queda debajo de la barra de
- * estado del sistema, que además se come el toque.
+ * `windowInsetsPadding(WindowInsets.safeDrawing.only(Top + Horizontal))`: con
+ * `enableEdgeToEdge()` en `MainActivity`, `Scaffold` coloca su `topBar` en
+ * (0,0) sin aplicarle ningún inset —lo espera del propio contenido, como
+ * hacen los `TopAppBar` de Material 3—, así que sin esto la pestaña queda
+ * debajo de la barra de estado del sistema, que además se come el toque.
+ * `safeDrawing` y no solo `statusBars`: en horizontal con muesca lateral
+ * (notch), las pestañas de los extremos quedan bajo el recorte si solo se
+ * evita la barra de estado. Solo arriba y a los lados: abajo no hace falta
+ * evitar nada porque `topBar` no llega ahí.
  *
  * El color de la pestaña inactiva es `texto`, no `apagado`: el nombre de la
  * pestaña es la única información de que hay una sección «progreso» o
@@ -239,7 +263,9 @@ private fun Pestanas(rutaActual: String?, nav: NavHostController) {
 
     PrimaryTabRow(
         selectedTabIndex = indice,
-        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+        modifier = Modifier.windowInsetsPadding(
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        ),
         containerColor = SRank.color.fondo,
         contentColor = SRank.color.ambar,
     ) {
