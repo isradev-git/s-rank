@@ -113,5 +113,47 @@ class RegistroViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Escribe tu nombre.", vm.estado.value.errorNombre)
+        assertEquals(0, api.vecesRegistro)
+    }
+
+    @Test
+    fun un_429_tras_un_422_no_deja_los_dos_avisos_a_la_vez() = runTest {
+        // Sin editar nada entre los dos intentos: si las cuatro banderas no
+        // se dejan explícitas en cada rama, el error de campo del primer
+        // intento se queda pegado en pantalla junto al general del segundo.
+        api.respuestaRegistro = {
+            throw HttpException(
+                Response.error<Any>(
+                    422,
+                    """{"message":"El correo ya está en uso.",
+                        "errors":{"email":["el correo ya está en uso"]}}"""
+                        .toResponseBody("application/json".toMediaType()),
+                ),
+            )
+        }
+        rellenaBien()
+        vm.registrar()
+        advanceUntilIdle()
+        assertEquals("El correo ya está en uso", vm.estado.value.errorCorreo)
+
+        api.respuestaRegistro = {
+            throw HttpException(
+                Response.error<Any>(
+                    429,
+                    """{"message":"Too Many Attempts."}"""
+                        .toResponseBody("application/json".toMediaType()),
+                ),
+            )
+        }
+        vm.registrar()
+        advanceUntilIdle()
+
+        assertEquals(
+            "Demasiados intentos. Espera un momento y vuelve a probar.",
+            vm.estado.value.errorGeneral,
+        )
+        assertNull(vm.estado.value.errorCorreo)
+        assertNull(vm.estado.value.errorNombre)
+        assertNull(vm.estado.value.errorContrasena)
     }
 }

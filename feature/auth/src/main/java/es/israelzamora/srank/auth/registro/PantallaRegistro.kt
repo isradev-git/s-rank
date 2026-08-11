@@ -53,9 +53,9 @@ fun PantallaRegistro(
             cargando = estado.cargando, modifier = Modifier.fillMaxWidth(),
         )
 
-        if (estado.errorGeneral != null) {
+        estado.errorGeneral?.let { mensaje ->
             Spacer(Modifier.height(12.dp))
-            Text(estado.errorGeneral!!, style = SRank.texto.cuerpo, color = SRank.color.rojo)
+            Text(mensaje, style = SRank.texto.cuerpo, color = SRank.color.rojo)
         }
 
         Spacer(Modifier.height(24.dp))

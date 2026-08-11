@@ -21,6 +21,8 @@ open class ApiFalsa : ApiSrank {
 
     var vecesLogin = 0
         private set
+    var vecesRegistro = 0
+        private set
     var vecesOlvide = 0
         private set
     var ultimoCorreoOlvido: String? = null
@@ -45,7 +47,10 @@ open class ApiFalsa : ApiSrank {
         return respuestaLogin()
     }
 
-    override suspend fun registro(peticion: RegistroPeticionDto) = respuestaRegistro()
+    override suspend fun registro(peticion: RegistroPeticionDto): LoginRespuestaDto {
+        vecesRegistro++
+        return respuestaRegistro()
+    }
 
     override suspend fun olvideContrasena(peticion: CorreoPeticionDto): MensajeDto {
         vecesOlvide++

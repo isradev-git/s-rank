@@ -43,20 +43,21 @@ class RegistroViewModel(private val auth: AuthRepositorio) : ViewModel() {
 
         // El registro son 3 por hora y por IP. Gastar uno en algo que el
         // servidor va a rechazar seguro deja al usuario una hora fuera.
-        val fallos = EstadoRegistro(
-            errorNombre = "Escribe tu nombre.".takeIf { actual.nombre.isBlank() },
-            errorCorreo = "Escribe tu correo.".takeIf { actual.correo.isBlank() },
-            errorContrasena = "La contraseña necesita $MINIMO_CONTRASENA caracteres como mínimo."
-                .takeIf { actual.contrasena.length < MINIMO_CONTRASENA },
-        )
-        if (fallos.errorNombre != null || fallos.errorCorreo != null ||
-            fallos.errorContrasena != null
-        ) {
+        val errorNombre = "Escribe tu nombre.".takeIf { actual.nombre.isBlank() }
+        val errorCorreo = "Escribe tu correo.".takeIf { actual.correo.isBlank() }
+        val errorContrasena = "La contraseña necesita $MINIMO_CONTRASENA caracteres como mínimo."
+            .takeIf { actual.contrasena.length < MINIMO_CONTRASENA }
+
+        if (errorNombre != null || errorCorreo != null || errorContrasena != null) {
+            // Las cuatro banderas quedan explícitas: si no se limpiara
+            // errorGeneral, un 429 de un intento anterior se quedaría pegado
+            // en pantalla junto al aviso de campo nuevo.
             _estado.update {
                 it.copy(
-                    errorNombre = fallos.errorNombre,
-                    errorCorreo = fallos.errorCorreo,
-                    errorContrasena = fallos.errorContrasena,
+                    errorNombre = errorNombre,
+                    errorCorreo = errorCorreo,
+                    errorContrasena = errorContrasena,
+                    errorGeneral = null,
                 )
             }
             return
@@ -74,12 +75,27 @@ class RegistroViewModel(private val auth: AuthRepositorio) : ViewModel() {
     /**
      * Un 422 trae el campo que falla, así que el mensaje va debajo de ese campo
      * y no en un aviso suelto que obliga a adivinar cuál era.
+     *
+     * Las dos ramas dejan las cuatro banderas en un estado explícito y
+     * completo: si un intento anterior dejó puesto un error de campo (o uno
+     * general) y este trae el otro tipo, no pueden convivir los dos a la vez.
      */
     private fun EstadoRegistro.conFallo(fallo: Throwable): EstadoRegistro {
         val error = fallo as? ErrorApi ?: ErrorApi.Desconocido
         if (error !is ErrorApi.Validacion) {
-            return copy(cargando = false, errorGeneral = error.mensaje)
+            return copy(
+                cargando = false,
+                errorNombre = null,
+                errorCorreo = null,
+                errorContrasena = null,
+                errorGeneral = error.mensaje,
+            )
         }
+        // ponytail: si el 422 trae un campo que no sea name/email/password se
+        // pierde en silencio (ni error de campo ni errorGeneral). Hoy no es
+        // alcanzable —AuthController::register solo valida esos tres— pero si
+        // registro gana un campo el día de mañana hace falta un test nuevo
+        // que lo destape antes de que el usuario se quede sin ningún aviso.
         return copy(
             cargando = false,
             errorNombre = error.porCampo["name"],
