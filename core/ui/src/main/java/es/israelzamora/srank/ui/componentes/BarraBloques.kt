@@ -27,8 +27,9 @@ import es.israelzamora.srank.ui.theme.SRankTheme
  * (el `coerceIn` de después no salva nada porque ya truncó mal). Se acota en
  * `Long` antes de convertir, no después.
  */
-fun bloquesEncendidos(progreso: Int, total: Int, bloques: Int = 10): Int {
+fun bloquesEncendidos(progreso: Int, total: Int): Int {
     if (total <= 0 || progreso <= 0) return 0
+    val bloques = 10
     val encendidos = (progreso.toLong() * bloques / total).coerceIn(0L, bloques.toLong())
     return encendidos.toInt()
 }
@@ -53,7 +54,7 @@ fun BarraBloques(
     color: Color = SRank.color.ambar,
 ) {
     val bloques = 10
-    val llenos = bloquesEncendidos(progreso, total, bloques)
+    val llenos = bloquesEncendidos(progreso, total)
     // Mismo desbordamiento que en bloquesEncendidos: se acota en Long antes
     // de convertir a Int, no después.
     val porcentaje = if (total <= 0) 0 else (progreso.toLong() * 100 / total).coerceIn(0L, 100L).toInt()
