@@ -14,7 +14,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":data:session"))
+    // api, no implementation: `Sesion` sale en la firma pública de `creaApi`.
+    api(project(":data:session"))
 
     api(libs.kotlinx.serialization.json)
     api(libs.retrofit)

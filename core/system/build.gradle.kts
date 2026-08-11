@@ -16,7 +16,10 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
-    implementation(project(":data:api"))
+    // api, no implementation: HoyDto/ProgresoDto/MisionDto salen como
+    // receptor de las funciones públicas `aDominio()` de Modelos.kt, y
+    // ApiSrank en la firma pública del constructor de SystemRepositorio.
+    api(project(":data:api"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

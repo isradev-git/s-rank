@@ -16,8 +16,10 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
-    implementation(project(":data:api"))
-    implementation(project(":data:session"))
+    // api, no implementation: ApiSrank y Sesion salen en la firma pública
+    // del constructor de AuthRepositorio.
+    api(project(":data:api"))
+    api(project(":data:session"))
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
