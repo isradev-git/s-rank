@@ -39,8 +39,6 @@ data class Hoy(
         get() = "${misiones.count { it.completada }} de ${misiones.size}"
 }
 
-private val NUMEROS: NumberFormat = NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-ES"))
-
 fun HoyDto.aDominio(): Hoy = Hoy(
     dia = formateaDiaLargo(LocalDate.parse(date)),
     progreso = progress.aDominio(),
@@ -72,5 +70,10 @@ fun MisionDto.aDominio(): Mision = Mision(
 private fun MisionDto.avanceLegible(): String? = when {
     completed -> null
     target <= 1 -> null
-    else -> "${NUMEROS.format(progress)} de ${NUMEROS.format(target)}"
+    else -> {
+        // Instanciado aquí y no a nivel de fichero: NumberFormat/DecimalFormat
+        // no son thread-safe, y en 1.2 esto lo llamará más de una pantalla.
+        val numeros = NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-ES"))
+        "${numeros.format(progress)} de ${numeros.format(target)}"
+    }
 }
