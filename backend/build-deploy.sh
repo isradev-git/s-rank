@@ -68,6 +68,22 @@ if [[ ! -f deploy/public/index.html ]]; then
   exit 1
 fi
 
+# ── vendor/ solo con lo de producción ─────────────────────────────────────────
+# El rsync se ha traído el vendor/ de desarrollo, que incluye PHPUnit, Mockery, Faker y
+# compañía: unos 8.000 ficheros que no pinta nada subir por FTP a una carpeta que sirve
+# por web. Esto lo rehace sin ellos, dentro de deploy/ y sin tocar el vendor/ local, que
+# es el que necesitan los tests.
+#
+# --optimize-autoloader genera el mapa de clases completo. En un hosting compartido, sin
+# opcache caliente, eso se nota en cada petición.
+echo "Reinstalando vendor/ sin dependencias de desarrollo..."
+( cd deploy && composer install --no-dev --optimize-autoloader --no-interaction --quiet )
+
+if [[ -d deploy/vendor/phpunit ]]; then
+  echo "ERROR: PHPUnit sigue en deploy/vendor/. Abortando." >&2
+  exit 1
+fi
+
 # Datos efímeros de desarrollo: no viajan
 find deploy/storage/framework/sessions \
      deploy/storage/framework/cache \

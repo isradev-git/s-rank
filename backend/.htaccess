@@ -13,6 +13,12 @@
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+    # Y el token CSRF, que es lo que manda el frontend web en toda escritura. Algunas
+    # configuraciones de CGI se comen las cabeceras que no reconocen; si esta se pierde,
+    # cada envío contesta 419 y no hay forma de verlo hasta estar en el servidor.
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
     # Bloquea acceso web directo a ficheros/carpetas internas del proyecto
     RewriteRule ^(\.env.*|\.git.*|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L]
 
