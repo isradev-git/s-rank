@@ -106,10 +106,7 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
       </p>
       <Comentario>{textoRacha(progreso.current_streak)}</Comentario>
 
-      <Seccion
-        titulo="Misiones de hoy"
-        resumen={`[${hechas} de ${obligatorias.length}]`}
-      >
+      <Seccion titulo="Misiones de hoy" resumen={`${hechas} de ${obligatorias.length}`}>
         <ul className="lista-misiones">
           {obligatorias.map((mision) => (
             <FilaMision key={mision.key} mision={mision} />

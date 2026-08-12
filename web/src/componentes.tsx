@@ -127,6 +127,7 @@ export function Seccion({
   children,
 }: {
   titulo: string;
+  /** Sin corchetes: los pone el componente, y van aria-hidden. */
   resumen: string;
   children: ReactNode;
 }) {
@@ -135,7 +136,11 @@ export function Seccion({
       <summary>
         <span className="flecha inicial" aria-hidden="true" />
         <span className="titulo-seccion">{titulo}</span>
-        <span className="resumen">{resumen}</span>
+        <span className="resumen">
+          <span aria-hidden="true">[</span>
+          {resumen}
+          <span aria-hidden="true">]</span>
+        </span>
         <span className="flecha final" aria-hidden="true" />
       </summary>
       {children}
@@ -147,9 +152,13 @@ export function Boton({
   children,
   ...resto
 }: { children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  // Los corchetes van aria-hidden o el nombre accesible del botón pasa a ser
+  // «corchete ENTRAR corchete». Son dibujo, como todo lo demás.
   return (
     <button className="boton" {...resto}>
-      [ {children} ]
+      <span aria-hidden="true">[ </span>
+      {children}
+      <span aria-hidden="true"> ]</span>
     </button>
   );
 }

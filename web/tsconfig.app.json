@@ -22,9 +22,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  // Los tests los ejecuta Node, no el navegador. Se quedan fuera de esta configuración
-  // para que `node:test` no obligue a meter los tipos de Node en el código del navegador,
-  // donde `process` y `Buffer` no existen y no deberían ni poder escribirse.
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  // Los tests entran también: los ejecuta Vitest, que corre sobre el mismo Vite y trae
+  // sus propios tipos. Antes quedaban fuera porque usaban `node:test` y eso obligaba a
+  // meter los tipos de Node en el código del navegador.
+  "include": ["src"]
 }

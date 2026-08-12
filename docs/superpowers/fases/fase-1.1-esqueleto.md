@@ -160,7 +160,7 @@ código HTTP en pantalla. La traducción vive en un solo sitio, `api.ts`.
 - [x] Las misiones del día se ven, con su texto en castellano.
 - [x] Sin conexión, cada pantalla dice qué pasa en español y ofrece reintentar.
 - [x] Se ve bien con el tamaño de letra del navegador al máximo.
-- [ ] Las pantallas tienen tests.
+- [x] Las pantallas tienen tests.
 - [ ] Instalada en el móvil desde el dominio real, y probada ahí.
 
 ## Lo que solo aparece fuera de los tests

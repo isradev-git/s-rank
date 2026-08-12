@@ -1,8 +1,17 @@
+/// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    // Las pantallas necesitan un DOM; las funciones de formato.ts no, pero tener dos
+    // ejecutores de tests para eso sería peor que pagar el arranque de jsdom.
+    environment: "jsdom",
+    // Desmonta lo pintado entre test y test: sin esto el segundo encuentra dos botones.
+    setupFiles: ["./src/tests-preparacion.ts"],
+    restoreMocks: true,
+  },
   server: {
     // El proyecto vive en /mnt/c, y WSL no entrega eventos de inotify para el disco de
     // Windows: sin esto Vite no se entera de ningún cambio y sirve el código de cuando
