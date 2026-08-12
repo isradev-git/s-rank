@@ -139,7 +139,7 @@ mensaje de la API que no viene ya en castellano.
 botones normales. En HTML eso significa `aria-hidden` en la decoración y el estado dicho
 con palabras.
 
-**Accesibilidad.** Contraste 4,5:1 sobre negro, objetivos táctiles de 48 px, y la
+**Accesibilidad.** Contraste 4,5:1 sobre el fondo, objetivos táctiles de 48 px, y la
 maquetación **no puede alinear con espacios** porque respeta el tamaño de letra del
 navegador: el hueco lo abre `flex`.
 

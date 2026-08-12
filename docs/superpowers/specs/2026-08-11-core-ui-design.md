@@ -23,7 +23,7 @@ Este documento cierra esas decisiones. No cambia ninguna del spec: las concreta.
 ### Lo que se hereda sin discutir
 
 Once colores con su hexadecimal · escala de cinco tamaños · JetBrains Mono empaquetada ·
-el cian reservado a las ventanas del Sistema · contraste 4,5:1 sobre negro · objetivos
+el cian reservado a las ventanas del Sistema · contraste 4,5:1 sobre el fondo · objetivos
 táctiles de 48 px · la maquetación no depende de anchos fijos en caracteres.
 
 ### La restricción rectora, llevada hasta el final
@@ -68,11 +68,13 @@ identificadores.
 ```css
 /* web/src/estilos.css */
 :root {
-  --fondo: #000000;
-  --superficie: #0d0d10;
-  --lineas: #1f1f23;
+  /* Nunca negro puro: en OLED deja estela al desplazar y deslumbra bajo el texto.
+     Lo vigila estilos.test.ts. */
+  --fondo: #121216;
+  --superficie: #1c1c21;
+  --lineas: #2a2a30;
   --texto: #e4e4e7;
-  --apagado: #52525b;
+  --apagado: #595962;
   --ambar: #f59e0b;   /* marca, acción, XP */
   --verde: #4ade80;   /* completado */
   --azul: #60a5fa;    /* información y navegación */
@@ -201,8 +203,10 @@ marcables a mano —hay un `POST /api/system/quests/{key}/complete` esperando—
 
 ### 5.3 `Comentario` y el límite del gris
 
-`#52525b` da **2,72:1** sobre negro. Está por debajo de 4,5:1 a propósito, y por eso el
-spec §7 lo limita a «texto secundario nunca esencial».
+`#595962` da **2,70:1** sobre el fondo. Está por debajo de 4,5:1 a propósito, y por eso el
+spec §7 lo limita a «texto secundario nunca esencial». Subió de `#52525b` cuando el fondo
+dejó de ser negro puro: el número es el mismo justamente porque es el que sostiene todo el
+razonamiento de este apartado, y dejarlo caer a 2,4:1 lo habría vaciado en silencio.
 
 De ahí sale una regla que no estaba escrita: **`apagado` nunca lleva la única copia de un
 dato**. Un comentario decorativo puede ir entero en apagado; uno que lleva información
@@ -210,7 +214,7 @@ dato**. Un comentario decorativo puede ir entero en apagado; uno que lleva infor
 
 ```
 //  →  apagado      el marcador es decoración
-texto →  texto       el dato se lee (16,5:1)
+texto →  texto       el dato se lee (14,7:1)
 ```
 
 Sigue leyéndose como comentario: lo dicen el marcador y el tamaño `nota`, no el gris.
@@ -236,17 +240,24 @@ un glifo, el navegador cae a otra **solo para ese carácter**, no para todo el t
 
 ### 5.5 Contrastes medidos
 
-| Token | Sobre negro | |
+No son números escritos a mano: `web/src/estilos.test.ts` los recalcula con la fórmula de
+WCAG 1.4.3 leyendo `estilos.css`, y falla si alguno baja de 4,5:1.
+
+| Token | Sobre `#121216` | |
 |---|---|---|
-| texto `#e4e4e7` | 16,5:1 | ✓ |
-| ámbar `#f59e0b` | 9,8:1 | ✓ |
-| verde `#4ade80` | 12,1:1 | ✓ |
-| azul `#60a5fa` | 8,3:1 | ✓ |
-| rojo `#f87171` | 7,6:1 | ✓ |
-| cian `#22d3ee` | 11,6:1 | ✓ |
-| morado `#a78bfa` | 7,7:1 | ✓ |
-| apagado `#52525b` | 2,7:1 | solo secundario, §5.3 |
-| líneas `#1f1f23` | 1,3:1 | ver abajo |
+| texto `#e4e4e7` | 14,7:1 | ✓ |
+| verde `#4ade80` | 10,7:1 | ✓ |
+| cian `#22d3ee` | 10,3:1 | ✓ |
+| ámbar `#f59e0b` | 8,7:1 | ✓ |
+| azul `#60a5fa` | 7,3:1 | ✓ |
+| morado `#a78bfa` | 6,9:1 | ✓ |
+| rojo `#f87171` | 6,8:1 | ✓ |
+| apagado `#595962` | 2,7:1 | solo secundario, §5.3 |
+| líneas `#2a2a30` | 1,3:1 | ver abajo |
+
+Todos bajaron algo al levantarse el fondo —el más justo pasa de 7,6:1 a 6,8:1— y ninguno
+se acerca al mínimo. Ese descenso **es el objetivo**, no un efecto colateral: 16,5:1 de
+texto sobre negro puro es más contraste del que ayuda a nadie.
 
 **La desviación conocida.** WCAG 1.4.11 pide 3:1 para el borde de un control que hace
 falta para identificarlo. `líneas` da 1,3:1 y `superficie` 1,1:1: un campo de texto cuyo
@@ -254,7 +265,7 @@ falta para identificarlo. `líneas` da 1,3:1 y `superficie` 1,1:1: un campo de t
 
 Los bordes de lo interactivo —campos y botones— usan `apagado` en reposo y `ámbar` al
 enfocarse. `apagado` da 2,7:1, todavía por debajo de 3:1, pero el control se identifica
-por su etiqueta en `texto` a 16,5:1, que siempre está visible.
+por su etiqueta en `texto` a 14,7:1, que siempre está visible.
 
 ```
 // ponytail: borde interactivo en apagado, 2,7:1 contra los 3:1 de WCAG 1.4.11.

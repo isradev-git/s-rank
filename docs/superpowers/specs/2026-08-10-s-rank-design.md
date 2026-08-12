@@ -416,11 +416,11 @@ Definido una vez en `core/ui/`; todas las pantallas se montan con estos componen
 
 | Token | Hex | Uso |
 |---|---|---|
-| fondo | `#000000` | negro puro |
-| superficie | `#0d0d10` | tarjetas y campos |
-| líneas | `#1f1f23` | separadores y bordes |
+| fondo | `#121216` | casi negro, **nunca negro puro** |
+| superficie | `#1c1c21` | tarjetas y campos |
+| líneas | `#2a2a30` | separadores y bordes |
 | texto | `#e4e4e7` | contenido |
-| apagado | `#52525b` | comentarios `//`, valores secundarios |
+| apagado | `#595962` | comentarios `//`, valores secundarios |
 | ámbar | `#f59e0b` | marca, acción, XP |
 | verde | `#4ade80` | completado |
 | azul | `#60a5fa` | información y navegación |
@@ -430,6 +430,14 @@ Definido una vez en `core/ui/`; todas las pantallas se montan con estos componen
 
 El cian está reservado. Si aparece en la interfaz normal, deja de significar «premio» y
 el momento de recompensa se desactiva.
+
+**El fondo no es negro puro, y no puede volver a serlo** (corregido el 12 de agosto de
+2026, sobre la aplicación ya instalada en el móvil). Dos motivos, ninguno visible en el
+monitor de un escritorio: en una pantalla OLED el negro puro apaga el píxel por completo y
+al desplazar tarda en encenderse otra vez, dejando estela; y el texto claro encima sube a
+16,5:1, que deslumbra y cansa la vista —molesta especialmente con astigmatismo—. `#121216`
+es la línea base oscura de Material (`#121212`) con el mismo tinte frío que el resto de los
+neutros. Bajar a `#000000` rompe `web/src/estilos.test.ts`.
 
 ### Tipografía
 
@@ -447,8 +455,10 @@ Sistema con esquinas en ángulo · insignia de rango · rombo de rareza `◆` / 
 
 ### Accesibilidad
 
-Contraste mínimo 4,5:1 sobre negro para todo el texto de contenido (los seis colores de
-acento lo cumplen; `#52525b` solo se usa en texto secundario nunca esencial). Objetivos
+Contraste mínimo 4,5:1 sobre el fondo para todo el texto de contenido (los seis colores de
+acento lo cumplen de sobra: el más justo es el rojo con 6,8:1; `#595962` solo se usa en
+texto secundario nunca esencial). Los ratios están medidos uno a uno en el §5.5 del spec de
+core-ui y los comprueba `web/src/estilos.test.ts` leyendo el CSS de verdad. Objetivos
 táctiles de 48 px. La app respeta el tamaño de fuente del sistema: la maquetación no
 puede depender de anchos fijos en caracteres.
 

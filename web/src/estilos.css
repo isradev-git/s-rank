@@ -17,11 +17,19 @@
 }
 
 :root {
-  --fondo: #000000;
-  --superficie: #0d0d10;
-  --lineas: #1f1f23;
+  /* El fondo NO es negro puro, y no puede volver a serlo. En una pantalla OLED el negro
+     puro apaga el píxel entero: al desplazar tarda en encenderse otra vez y deja estela.
+     Y con texto claro encima el contraste se va a 16,5:1, que deslumbra y cansa la vista
+     —molesta especialmente a quien tiene astigmatismo—. #121216 es la línea base oscura de
+     Material (#121212) con el mismo tinte frío que el resto de los neutros: r=g, b un
+     pelín por encima. Lo comprueba `estilos.test.ts`. */
+  --fondo: #121216;
+  --superficie: #1c1c21;
+  --lineas: #2a2a30;
   --texto: #e4e4e7;
-  --apagado: #52525b;
+  /* Sube de #52525b al levantarse el fondo: así conserva sus 2,7:1 exactos, que es el
+     número que el spec §5.3 usa para justificar dónde puede y dónde no puede usarse. */
+  --apagado: #595962;
   --ambar: #f59e0b;
   --verde: #4ade80;
   --azul: #60a5fa;
@@ -134,7 +142,7 @@ body {
   margin: 0.125rem 0;
 }
 
-/* El marcador es decoración y va en apagado; el dato se lee y va en texto (16,5:1).
+/* El marcador es decoración y va en apagado; el dato se lee y va en texto (14,7:1).
    Spec §5.3: `apagado` nunca lleva la única copia de un dato. */
 .comentario .dato {
   color: var(--texto);
@@ -300,7 +308,7 @@ body {
   padding: 0 0.75rem;
   /* ponytail: borde interactivo en apagado, 2,7:1 contra los 3:1 de WCAG 1.4.11.
      El techo es ese, y se sostiene porque la etiqueta de arriba está siempre visible
-     a 16,5:1. Si en el móvil cuesta ver dónde se escribe, sube a #6b7280 (4,34:1). */
+     a 14,7:1. Si en el móvil cuesta ver dónde se escribe, sube a #6b7280 (3,87:1). */
   border: 1px solid var(--apagado);
 }
 
