@@ -23,7 +23,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-const leer = (ruta: string) => readFileSync(new URL(ruta, import.meta.url), "utf8");
+// Ruta de texto, no `new URL(...)`: dentro de jsdom el URL que se construye no es el de
+// Node y `readFileSync` lo rechaza con «The URL must be of scheme file».
+const leer = (ruta: string) => readFileSync(`${import.meta.dirname}/${ruta}`, "utf8");
 
 const css = leer("./estilos.css");
 const html = leer("../index.html");
