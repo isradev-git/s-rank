@@ -13,6 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // El frontend web se autentica con la cookie de sesión, no con un token guardado
+        // en el navegador: ahí dentro hay datos de salud, y un token en localStorage
+        // convierte cualquier XSS en robo de cuenta. Esto marca como «stateful» solo a
+        // las peticiones que vengan de SANCTUM_STATEFUL_DOMAINS, así que las del móvil
+        // —o las de la suite, que no mandan Origin— siguen yendo por Bearer sin enterarse.
+        $middleware->statefulApi();
+
         // Sin esto, Laravel redirige al invitado a la ruta «login», que aquí no existe:
         // el middleware revienta con RouteNotFoundException antes de que el manejador de
         // excepciones pueda intervenir, y un 401 legítimo sale como 500. Devolviendo null

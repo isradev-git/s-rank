@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\ResetPasswordCode;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -25,6 +27,26 @@ class AuthController extends Controller
      * cueste el mismo tiempo que comprobar una real: ver el comentario de login().
      */
     private const HASH_SENUELO = '$2y$12$96UFsKhZ57oAENNGyJK24.Y6lWc6rcvyVJPj8ACa0yYBIBzcKMsda';
+
+    /**
+     * Abre sesión de cookie, y solo si la petición viene del frontend web.
+     *
+     * Sanctum le da sesión únicamente a las peticiones cuyo Origin está en
+     * SANCTUM_STATEFUL_DOMAINS. Las de un móvil y las de la suite no mandan Origin, así
+     * que no entran aquí y siguen autenticándose con el `access_token` de la respuesta.
+     */
+    private function abrirSesionWeb(Request $request, User $user): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        Auth::guard('web')->login($user);
+
+        // Sin regenerar, un identificador de sesión que alguien conociera de antes
+        // seguiría valiendo ya autenticado. Es fijación de sesión de manual.
+        $request->session()->regenerate();
+    }
 
     public function register(Request $request)
     {
@@ -42,6 +64,8 @@ class AuthController extends Controller
             'weekly_goal' => 3,
             'main_goal'   => 'health',
         ]);
+
+        $this->abrirSesionWeb($request, $user);
 
         return response()->json([
             'access_token' => $user->createToken('auth_token')->plainTextToken,
@@ -157,6 +181,8 @@ class AuthController extends Controller
             ]);
         }
 
+        $this->abrirSesionWeb($request, $user);
+
         return response()->json([
             'access_token' => $user->createToken('auth_token')->plainTextToken,
             'token_type'   => 'Bearer',
@@ -167,7 +193,20 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        // Quien entra por cookie no tiene token que borrar: currentAccessToken() le
+        // devuelve un TransientToken, que no se puede eliminar. Lo que hay que invalidar
+        // en su caso es la sesión, y son dos caminos distintos aunque la ruta sea una.
+        $token = $request->user()->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        if ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }

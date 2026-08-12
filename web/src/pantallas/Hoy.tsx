@@ -6,6 +6,7 @@ import {
   Seccion,
   TituloPantalla,
 } from "../componentes";
+import type { Usuario } from "../api";
 import { MISIONES, PROGRESO, SESION } from "../falso";
 
 // Europe/Madrid fijo, no la zona del navegador: el servidor decide a qué día pertenecen
@@ -17,12 +18,14 @@ const FECHA = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-export default function Hoy() {
+// El nombre ya sale de la sesión real; el rango, el nivel y las misiones siguen siendo
+// inventados hasta que se conecte GET /api/system/today.
+export default function Hoy({ usuario }: { usuario: Usuario }) {
   const hechas = MISIONES.filter((m) => m.completed).length;
 
   return (
     <>
-      <TituloPantalla pantalla="hoy" usuario={SESION.usuario} rango={SESION.rango} />
+      <TituloPantalla pantalla="hoy" usuario={usuario.name} rango={SESION.rango} />
       <Comentario>{FECHA.format(new Date())}</Comentario>
 
       <div className="fila-nivel">

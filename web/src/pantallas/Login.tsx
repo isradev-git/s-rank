@@ -1,17 +1,31 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
+import { ErrorApi, entrar, type Fallo } from "../api";
 import { Boton, Campo, Comentario, TituloPantalla } from "../componentes";
 
-export default function Login() {
-  const navegar = useNavigate();
+export default function Login({ alEntrar }: { alEntrar: () => void }) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [fallo, setFallo] = useState<Fallo | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
-  // ponytail: de momento entra sin preguntar a nadie. El paso 2 lo cambia por la
-  // llamada real a POST /api/login contra el Laravel local.
-  function entrar(evento: React.FormEvent) {
+  async function enviar(evento: React.FormEvent) {
     evento.preventDefault();
-    navegar("/");
+    setEnviando(true);
+    setFallo(null);
+
+    try {
+      await entrar(correo, contrasena);
+      alEntrar();
+    } catch (error) {
+      // El error ya viene traducido de api.ts. Aquí solo se decide dónde ponerlo.
+      setFallo(
+        error instanceof ErrorApi
+          ? error.fallo
+          : { general: "No hemos podido conectar. Inténtalo otra vez.", campos: {} },
+      );
+      setEnviando(false);
+    }
   }
 
   return (
@@ -19,7 +33,7 @@ export default function Login() {
       <TituloPantalla pantalla="entrar" />
       <Comentario>Tu progreso te está esperando</Comentario>
 
-      <form onSubmit={entrar}>
+      <form onSubmit={enviar}>
         <Campo
           etiqueta="correo"
           name="email"
@@ -28,6 +42,7 @@ export default function Login() {
           required
           value={correo}
           onChange={(e) => setCorreo(e.target.value)}
+          error={fallo?.campos.email}
         />
         <Campo
           etiqueta="contraseña"
@@ -37,8 +52,20 @@ export default function Login() {
           required
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
+          error={fallo?.campos.password}
         />
-        <Boton type="submit">ENTRAR</Boton>
+
+        {/* El error general va aparte del de campo: un «demasiados intentos» no es culpa
+            del correo que hay escrito, y colgárselo debajo haría pensar que sí. */}
+        {fallo?.general && (
+          <p className="aviso" role="alert">
+            {fallo.general}
+          </p>
+        )}
+
+        <Boton type="submit" disabled={enviando}>
+          {enviando ? "ENTRANDO…" : "ENTRAR"}
+        </Boton>
       </form>
 
       <nav className="enlaces">

@@ -26,18 +26,22 @@ export type Mision = {
  *  prompt de verdad ocuparía el nombre del equipo. */
 export function TituloPantalla({
   pantalla,
-  usuario = "invitado",
+  usuario,
   rango,
 }: {
   pantalla: string;
   usuario?: string;
   rango?: string;
 }) {
+  // «Israel Zamora» en un prompt queda raro y además parte la línea. Se usa el primer
+  // nombre en minúscula, como el usuario de un terminal de verdad.
+  const nombre = usuario?.trim().split(" ")[0]?.toLowerCase() || "invitado";
+
   return (
     <h1 className="titulo-pantalla">
       <span aria-hidden="true">
         <span className="usuario">
-          {usuario}
+          {nombre}
           {rango && `[${rango}]`}
         </span>
         <span className="host">@s-rank</span>
