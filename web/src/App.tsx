@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes } from "react-router";
-import { SESION_CADUCADA, usuarioActual, type Usuario } from "./api";
-import { Comentario, TituloPantalla } from "./componentes";
+import { SESION_CADUCADA, salir, usuarioActual, type Usuario } from "./api";
+import { Boton, Comentario, TituloPantalla } from "./componentes";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
+import Recuperar from "./pantallas/Recuperar";
+import Registro from "./pantallas/Registro";
 
 /** Las tres pestañas, arriba y fijas. Fuera de ellas: login, registro y recuperar. */
 function ConPestanas() {
@@ -27,6 +29,34 @@ function Pendiente({ titulo, fase, usuario }: { titulo: string; fase: string; us
     <>
       <TituloPantalla pantalla={titulo} usuario={usuario} />
       <Comentario>llega en la fase {fase}</Comentario>
+    </>
+  );
+}
+
+/** Perfil es de la fase 1.5, pero salir tiene que poderse desde ya. */
+function Perfil({ usuario, alSalir }: { usuario: Usuario; alSalir: () => void }) {
+  const [saliendo, setSaliendo] = useState(false);
+
+  async function cerrar() {
+    setSaliendo(true);
+    // Si la petición falla, la sesión de aquí se cierra igual: dejar al usuario dentro
+    // porque el servidor no contestó es lo contrario de lo que acaba de pedir. La cookie
+    // caduca sola, y volver a entrar la sustituye.
+    try {
+      await salir();
+    } catch {
+      // Sin nada que hacer: el usuario ya se va.
+    }
+    alSalir();
+  }
+
+  return (
+    <>
+      <TituloPantalla pantalla="perfil" usuario={usuario.name} />
+      <Comentario>llega en la fase 1.5</Comentario>
+      <Boton type="button" onClick={() => void cerrar()} disabled={saliendo}>
+        {saliendo ? "SALIENDO…" : "SALIR"}
+      </Boton>
     </>
   );
 }
@@ -59,8 +89,11 @@ export default function App() {
           path="/login"
           element={<Login alEntrar={() => usuarioActual().then(setUsuario)} />}
         />
-        <Route path="/registro" element={<Pendiente titulo="crear cuenta" fase="1.1" />} />
-        <Route path="/recuperar" element={<Pendiente titulo="recuperar" fase="1.1" />} />
+        <Route
+          path="/registro"
+          element={<Registro alEntrar={() => usuarioActual().then(setUsuario)} />}
+        />
+        <Route path="/recuperar" element={<Recuperar />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -74,10 +107,7 @@ export default function App() {
           path="/progreso"
           element={<Pendiente titulo="progreso" fase="1.4" usuario={usuario.name} />}
         />
-        <Route
-          path="/perfil"
-          element={<Pendiente titulo="perfil" fase="1.5" usuario={usuario.name} />}
-        />
+        <Route path="/perfil" element={<Perfil usuario={usuario} alSalir={() => setUsuario(null)} />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

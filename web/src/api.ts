@@ -176,6 +176,25 @@ export function registrar(name: string, email: string, password: string) {
   });
 }
 
+/** Pide el código de seis cifras.
+ *
+ *  Responde 200 exista o no el correo, a propósito: un mensaje distinto por caso
+ *  convertiría este endpoint en una lista de cuentas válidas. La pantalla tiene que
+ *  avanzar igual en los dos casos, así que aquí no hay nada que mirar en la respuesta. */
+export function pedirCodigo(email: string) {
+  return pedir<{ message: string }>("/auth/forgot-password", {
+    metodo: "POST",
+    cuerpo: { email },
+  });
+}
+
+export function cambiarContrasena(email: string, code: string, password: string) {
+  return pedir<{ message: string }>("/auth/reset-password", {
+    metodo: "POST",
+    cuerpo: { email, code, password },
+  });
+}
+
 export function salir() {
   return pedir<{ message: string }>("/auth/logout", { metodo: "POST" });
 }
