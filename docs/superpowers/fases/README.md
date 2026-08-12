@@ -9,7 +9,7 @@ construir, qué endpoints se consumen y cuándo se puede dar por terminada.
 | Fase | Contenido | Estado |
 |---|---|---|
 | [1.0](fase-1.0-backend.md) | Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha** — en producción |
-| [1.1](fase-1.1-esqueleto.md) | Esqueleto Android: navegación, diseño, login y registro | **en curso** — diseño cerrado y plan escrito, sin código |
+| [1.1](fase-1.1-esqueleto.md) | Esqueleto web: navegación, diseño, login, registro y PWA | **en curso** — construido y probado en local, sin desplegar |
 | [1.2](fase-1.2-entrenamiento.md) | Entrenamiento, con borrador sin conexión | pendiente |
 | [1.3](fase-1.3-nutricion.md) | Nutrición, agua, suplementos, actividad, recetas | pendiente |
 | [1.4](fase-1.4-progreso.md) | Historial, calendario, gráficas, récords | pendiente |
@@ -29,9 +29,15 @@ que gobiernan el proyecto entero son:
 | Documento | Qué contiene |
 |---|---|
 | `docs/superpowers/specs/2026-08-10-s-rank-design.md` | El diseño aprobado: arquitectura, fórmulas, sistema de diseño, mapa de pantallas |
-| `docs/superpowers/specs/2026-08-11-core-ui-design.md` | El sistema de diseño de Android al detalle: los once colores con su contraste medido, la escala tipográfica y los ocho componentes |
+| `docs/superpowers/specs/2026-08-11-core-ui-design.md` | El sistema de diseño al detalle: los once colores con su contraste medido, la escala tipográfica y los ocho componentes |
 | `docs/superpowers/plans/despliegue-fase-1-0.md` | Qué hay montado en producción y con qué credenciales |
 | Este directorio | Qué toca en cada fase |
+
+⚠️ **El frontend fue Android hasta el 12 de agosto de 2026** y ahora es web: React +
+TypeScript con Vite, en `web/`, instalable como PWA. El esqueleto en Kotlin sigue
+recuperable en la etiqueta `android-fase-1.1`, y el plan de aquella fase se borró para que
+no despiste a nadie. Todos estos documentos están al día; donde nombran a Android es a
+propósito, para comparar. El porqué del cambio está en [fase-1.1](fase-1.1-esqueleto.md).
 
 ## Las tres reglas que no cambian entre fases
 
@@ -46,9 +52,12 @@ debe ser publicar eventos nuevos, no tocar el núcleo.
 
 En el backend solo se cumple la mitad: los controladores publican eventos y no mencionan
 al Sistema, pero el Sistema sí consulta modelos de dominio (`QuestService`). Se queda
-así a propósito. En Android la separación que se busca es la de módulos de Gradle:
-**`core/system` no declara `feature/*`**, y eso lo verifica el compilador solo. El detalle
-está en `CLAUDE.md`.
+así a propósito.
+
+En el frontend **no la vigila nadie**. En Android la garantizaba el grafo de dependencias
+de Gradle; en una aplicación de Vite no hay módulos que lo impidan, y no se va a montar un
+sistema de módulos falso para fingirlo. Es disciplina de carpetas. El detalle está en
+`CLAUDE.md`.
 
 **3 · Todo el XP se calcula en el servidor.** La app nunca decide cuánto XP vale algo:
 lo pinta. El cliente enseña lo que el bloque `system` de la respuesta le diga.

@@ -113,7 +113,7 @@ todo el historial.
 - [ ] El panel de administración solo aparece para administradores.
 - [ ] El cronómetro funciona.
 - [ ] El cian no aparece fuera de las ventanas del Sistema.
-- [ ] Hay tests de ViewModel.
+- [ ] Hay tests de las pantallas y de las funciones con ramas.
 
 ## Al cerrar la fase 1
 

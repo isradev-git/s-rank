@@ -1,9 +1,14 @@
-# S-RANK — Sistema de diseño de `core/ui`
+# S-RANK — Sistema de diseño
 
-**Fecha:** 2026-08-11
-**Estado:** aprobado, pendiente de plan de implementación
+**Fecha:** 2026-08-11 · revisado el 2026-08-12 al pasar el frontend a web
+**Estado:** aprobado e implementado
 **Concreta:** `2026-08-10-s-rank-design.md` §7 (sistema de diseño) y §4 (arquitectura)
-**Fase:** 1.1 · Esqueleto Android
+**Fase:** 1.1 · Esqueleto web
+
+> Este documento se escribió para Compose. **Las decisiones no han cambiado** —los once
+> colores, sus contrastes medidos, la escala tipográfica, los ocho componentes y la regla
+> de accesibilidad son las mismas—, solo la forma de construirlas. Lo implementado está en
+> `web/src/estilos.css` y `web/src/componentes.tsx`.
 
 ---
 
@@ -19,7 +24,7 @@ Este documento cierra esas decisiones. No cambia ninguna del spec: las concreta.
 
 Once colores con su hexadecimal · escala de cinco tamaños · JetBrains Mono empaquetada ·
 el cian reservado a las ventanas del Sistema · contraste 4,5:1 sobre negro · objetivos
-táctiles de 48 dp · la maquetación no depende de anchos fijos en caracteres.
+táctiles de 48 px · la maquetación no depende de anchos fijos en caracteres.
 
 ### La restricción rectora, llevada hasta el final
 
@@ -36,7 +41,7 @@ obstáculo.
 
 | # | Decisión | Motivo |
 |---|---|---|
-| 1 | Pestañas **arriba**, fijas | Como las capturas de referencia. Fijas porque perderlas en un scroll largo es peor que gastar 48 dp |
+| 1 | Pestañas **arriba**, fijas | Como las capturas de referencia. Fijas porque perderlas en un scroll largo es peor que gastar 48 px |
 | 2 | Ámbar, verde y azul para el día a día; **rojo, morado y cian solo al recompensar** | El argumento que protege el cian vale igual para el récord y la rareza épica |
 | 3 | **Sin iconos** en las filas | El mismo motivo por el que la fuente va empaquetada: cada fabricante dibuja los emoji a su manera |
 | 4 | Se construyen **7 de los 9** componentes | La barra continua y el rombo de rareza no tienen quién los dispare en 1.1 |
@@ -60,33 +65,28 @@ acabaría escapándose a la interfaz normal sin que nadie lo notara.
 Los once tokens se llaman por su nombre del spec, en castellano y sin tildes en los
 identificadores.
 
-```kotlin
-// core/ui/theme/Color.kt
-@Immutable
-data class SRankColors(
-    val fondo: Color,       // #000000
-    val superficie: Color,  // #0d0d10
-    val lineas: Color,      // #1f1f23
-    val texto: Color,       // #e4e4e7
-    val apagado: Color,     // #52525b
-    val ambar: Color,       // #f59e0b  marca, acción, XP
-    val verde: Color,       // #4ade80  completado
-    val azul: Color,        // #60a5fa  información y navegación
-    // ponytail: los tres siguientes solo los toca el momento de recompensa.
-    // Si aparecen en una pantalla normal, el premio deja de significar nada.
-    val rojo: Color,        // #f87171  récord, alerta
-    val cian: Color,        // #22d3ee  EXCLUSIVO de las ventanas del Sistema
-    val morado: Color,      // #a78bfa  rareza épica
-)
-
-object SRank {
-    val color: SRankColors     @Composable get() = LocalSRankColors.current
-    val texto: SRankTypography @Composable get() = LocalSRankTypography.current
+```css
+/* web/src/estilos.css */
+:root {
+  --fondo: #000000;
+  --superficie: #0d0d10;
+  --lineas: #1f1f23;
+  --texto: #e4e4e7;
+  --apagado: #52525b;
+  --ambar: #f59e0b;   /* marca, acción, XP */
+  --verde: #4ade80;   /* completado */
+  --azul: #60a5fa;    /* información y navegación */
+  /* Los tres siguientes solo los toca el momento de recompensa. Si aparecen en una
+     pantalla normal, el premio deja de significar nada. */
+  --rojo: #f87171;    /* récord, alerta */
+  --cian: #22d3ee;    /* EXCLUSIVO de las ventanas del Sistema */
+  --morado: #a78bfa;  /* rareza épica */
 }
 ```
 
-`SRankTheme` envuelve un `MaterialTheme` cuyo `ColorScheme` se rellena con los mismos
-valores, para que los componentes de M3 no aporten color propio por debajo.
+En web no hace falta envolver nada ni pelearse con ningún tema por debajo: son variables
+CSS y no hay una biblioteca de componentes aportando color propio. `color-scheme: dark`
+le dice al navegador que pinte en oscuro sus propios controles.
 
 ### 3.2 Tipografía
 
@@ -100,42 +100,45 @@ JetBrains Mono en `core/ui/src/main/res/font/`. Nunca la monoespaciada del siste
 | `nota` | 11,5 sp | comentarios `//`, valores secundarios |
 | `etiqueta` | 10,5 sp | versales |
 
-Las versales se hacen con mayúsculas y algo de `letterSpacing`. Compose no tiene versales
-de verdad y empaquetar una segunda fuente para fingirlas no compensa.
+Las versales se hacen con `text-transform: uppercase` y algo de `letter-spacing`. No hay
+versales de verdad en la fuente y traer una segunda para fingirlas no compensa.
 
-Todos los tamaños en `sp`, nunca en `dp`: la app respeta el tamaño de fuente del sistema.
+Todos los tamaños en `rem`, nunca en `px`: así respetan el tamaño de letra que el usuario
+tenga puesto en el navegador. Es el equivalente exacto del `sp` de Android.
 
 ---
 
-## 4. Módulos de Gradle
+## 4. Cómo se reparte el código
 
-Seis, los del spec §3. Ni uno más.
+Seis ficheros y una carpeta. Ni uno más.
 
-| Módulo | Qué lleva | De quién depende |
-|---|---|---|
-| `core/ui` | tokens y los siete componentes | de nadie |
-| `core/system` | `Progreso`, `Mision`, `Rango`, su repositorio, la cabecera de progreso y la lista de misiones | `core/ui`, `data/api` |
-| `data/api` | Retrofit, interceptor de token, traducción de errores | — |
-| `data/session` | DataStore: token y usuario | — |
-| `feature/auth` | login, registro, recuperar contraseña | `core/ui`, `data/api`, `data/session` |
-| `app` | navegación, pestañas, «hoy», los dos huecos | todos |
+| Fichero | Qué lleva |
+|---|---|
+| `src/estilos.css` | los once colores, la escala tipográfica y el aspecto de los componentes |
+| `src/componentes.tsx` | los ocho componentes del sistema de diseño |
+| `src/formato.ts` | los cálculos y textos con ramas — es lo que está probado |
+| `src/api.ts` | la única puerta a la API: peticiones, tipos y traducción de errores |
+| `src/App.tsx` | rutas, pestañas y el portero de sesión |
+| `src/pantallas/` | una por pantalla |
 
-**`core/system` no declara `feature/*`.** Es la mitad de la regla rectora que en Android
-sale gratis, y la vigila el compilador en vez de la disciplina.
+**Todos los componentes en un fichero.** Son pequeños: ocho ficheros de veinte líneas
+cuestan más de mantener que uno de ciento sesenta. Se separan cuando alguno crezca de
+verdad, no antes.
 
-`feature/training`, `nutrition`, `progress` y `profile` **no se crean**. Un módulo vacío es
-ceremonia que hay que mantener; los levanta cada fase cuando le toque. `data/draft` (Room)
-tampoco: es de la fase 1.2.
+⚠️ **La dirección de dependencias ya no la vigila nadie.** En Android era el grafo de
+Gradle —`core/system` no podía declarar `feature/*`— y de eso se encargaba el compilador.
+Aquí no hay módulos que lo impidan, y **no se monta un sistema de módulos falso para
+fingirlo**. Con cinco pantallas basta la disciplina; cuando no baste, la herramienta es
+`eslint-plugin-boundaries`.
 
-«Hoy» vive en `app/` y monta secciones. Es lo que permite que un módulo de la fase 2 gane
-una sección sin tocar la navegación. En 1.1 la única sección son las misiones, que las
-aporta `core/system`.
+«Hoy» monta secciones, y eso no cambia: es lo que permite que un módulo de la fase 2 gane
+una sección sin tocar la navegación. En 1.1 la única sección son las misiones.
 
 ### `.gitignore`
 
-Se le añade lo de Android —`/build`, `**/build/`, `.gradle/`, `local.properties`, `*.apk`,
-`*.keystore`, `.cxx/`— **sin tocar** las reglas que ya protegen `*.sqlite`, `*.sql` y
-`.env*`. Esas son las que evitan que se suban datos de salud y credenciales.
+Lo de Node lo trae `web/.gitignore`, que genera Vite: `node_modules`, `dist` y los
+registros. **Sin tocar** las reglas de la raíz que protegen `*.sqlite`, `*.sql` y `.env*`.
+Esas son las que evitan que se suban datos de salud y credenciales.
 
 ---
 
@@ -151,7 +154,7 @@ la promesa de respetar el tamaño de fuente del sistema.
 | `CabeceraSeccion` | `▸ TÍTULO` · espacio · `[2 de 4] ▾`, plegable | «hoy» |
 | `Comentario` | `// texto` | todas |
 | `BarraBloques` | diez bloques, línea propia | barra de XP |
-| `BotonSRank` | borde visible, 48 dp mínimo | formularios |
+| `BotonSRank` | borde visible, 48 px mínimo | formularios |
 | `InsigniaRango` | la letra del rango con su marco | cabecera de «hoy» |
 | `VentanaSistema` | cian, esquinas en ángulo | solo `@Preview` |
 
@@ -160,18 +163,23 @@ la promesa de respetar el tamaño de fuente del sistema.
 `Text("[✓] Beber 2 litros de agua")` lo lee TalkBack como «corchete, marca de
 verificación, corchete». La fila entera va como un solo nodo semántico:
 
-```kotlin
-Row(
-    Modifier.clearAndSetSemantics {
-        text = AnnotatedString(mision.etiqueta)
-        stateDescription = if (mision.completada) "hecha" else "pendiente"
-    }
-) { /* [✓], la etiqueta y el // son dibujo, no contenido */ }
+```jsx
+<li className="fila-mision">
+  <span className="marca" aria-hidden="true">[{hecha ? "✓" : " "}]</span>
+  <span>
+    {mision.label}
+    <span className="solo-lectores">{hecha ? ", hecha" : ", pendiente"}</span>
+  </span>
+</li>
 ```
 
-Un usuario ciego oye «Beber 2 litros de agua, hecha». Lo mismo con el `$` de las
-cabeceras y con el `▸`/`▾` de las secciones, que se sustituyen por el estado
-plegado/desplegado que Compose ya sabe anunciar.
+Un usuario ciego oye «Beber 2 litros de agua, hecha». Lo mismo con el prompt de las
+cabeceras, que va entero en `aria-hidden`, y con el `▸`/`▾` de las secciones: al ser un
+`<details>` nativo, el navegador ya anuncia «desplegado» o «plegado» sin que haya que
+escribirlo.
+
+Es la mitad de la regla rectora, y en HTML sale sin acrobacias: `aria-hidden` en el dibujo
+y el estado dicho con palabras en un `<span>` que solo existe para el lector de pantalla.
 
 ### 5.2 `FilaMision`
 
@@ -187,7 +195,7 @@ Ocho claves fijas: `train`, `water`, `protein`, `weight`, `meals_3`, `supplement
 `pushups_50`, `steps_8000`.
 
 El avance parcial va debajo como comentario. Es de solo lectura en 1.1: las filas no son
-objetivos táctiles y no necesitan los 48 dp. Cuando la fase 1.2 traiga las opcionales
+objetivos táctiles y no necesitan los 48 px. Cuando la fase 1.2 traiga las opcionales
 marcables a mano —hay un `POST /api/system/quests/{key}/complete` esperando— es añadir un
 `onClick` nullable, no rediseñar.
 
@@ -217,14 +225,14 @@ Diez bloques como texto, en **línea propia**:
 ```
 
 Compartir línea con los números da unos 24 caracteres, que con la fuente al máximo no
-caben en un móvil de 320 dp. Separadas, la barra ocupa unos 187 dp de los 288 disponibles.
+caben en un móvil de 320 px. Separadas, la barra ocupa unos 187 px de los 288 disponibles.
 
 Avanza a saltos del 10 %. Para una estética de terminal se lee como intención, y al subir
 de nivel los bloques se encienden de uno en uno.
 
-⚠️ `▓` y `░` son U+2593 y U+2591. **Si JetBrains Mono no trae esos glifos, Android se cae
-a otra fuente y la barra se descuadra.** Se comprueba contra el TTF antes de dar la barra
-por buena; si faltan, se dibuja con `Canvas` (§9).
+⚠️ `▓` y `░` son U+2593 y U+2591. JetBrains Mono los trae, comprobado leyendo la tabla
+`cmap` del TTF. En web el riesgo es además menor que en Android: si a una fuente le faltara
+un glifo, el navegador cae a otra **solo para ese carácter**, no para todo el texto.
 
 ### 5.5 Contrastes medidos
 
@@ -375,9 +383,8 @@ reintentar. El borrador sin conexión es de la fase 1.2.
 
 ## 9. Qué se prueba
 
-Los ViewModel, como pide la fase, y las dos piezas con ramas de verdad. **Un test que no
-falla sin el arreglo no vale**: se quita el arreglo, se comprueba que el test cae, se
-restaura.
+Las piezas con ramas de verdad, con Vitest. **Un test que no falla sin el arreglo no
+vale**: se quita el arreglo, se comprueba que el test cae, se restaura.
 
 - El traductor de errores: un caso por fila de la tabla de §8.1.
 - Recuperar contraseña: **mismo texto y mismo avance** exista o no el correo.
@@ -391,9 +398,11 @@ restaura.
 La fase 1.0 dejó cuatro fallos que pasaron 254 tests y solo aparecieron al tocar el
 servidor. Estas dos son de la misma familia y se comprueban **en un móvil real**:
 
-1. Que JetBrains Mono trae `▓` y `░`. Si no, la barra de XP se descuadra y hay que
-   dibujarla con `Canvas`.
-2. Que todo se lee con el tamaño de fuente del sistema al máximo.
+1. Que la cookie de sesión viaje. La suite del backend corre con `SESSION_DRIVER=array`,
+   que no guarda nada entre peticiones, así que el ida y vuelta no se puede reproducir ahí.
+2. Que todo se lee con el tamaño de letra del navegador al máximo.
+3. Que la CSP cerrada no bloquee nada. Si bloquea, la aplicación sale en blanco.
+4. Que se pueda instalar en el móvil, que solo se ofrece sobre HTTPS.
 
 ---
 
@@ -403,9 +412,9 @@ servidor. Estas dos son de la misma familia y se comprueban **en un móvil real*
 macros que enseñar) y el rombo de rareza `◆`/`◇` (fase 1.5, con la pantalla de logros).
 No se escriben ahora: en 1.1 no hay datos con los que juzgar si están bien.
 
-La `VentanaSistema` sí se escribe, aunque nada la dispare todavía. Es el momento de
-recompensa y define la identidad de la app; verla ahora, aunque sea en un `@Preview`,
-evita descubrir en 1.2 que obliga a retocar tokens ya cerrados.
+La `VentanaSistema` se aplaza a la 1.2, que es cuando algo la dispara. En Android se
+escribió por adelantado para poder verla en un `@Preview`; aquí eso no aporta lo mismo,
+porque cualquier pantalla se ve entera pulsando F5.
 
 **Tema claro.** La app es negra. No hay variante.
 

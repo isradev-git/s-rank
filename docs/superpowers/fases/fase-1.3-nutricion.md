@@ -114,7 +114,7 @@ móviles limitados y el hosting es compartido.
 - [ ] Las recetas se crean y se usan.
 - [ ] Los pasos se guardan y mantienen la racha sin dar XP de entreno.
 - [ ] Apuntar el peso completa su misión cuando toca.
-- [ ] Hay tests de ViewModel.
+- [ ] Hay tests de las pantallas y de las funciones con ramas.
 
 ## Prompt para arrancar el chat
 

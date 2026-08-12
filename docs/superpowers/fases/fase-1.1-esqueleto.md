@@ -1,149 +1,122 @@
-# Fase 1.1 · Esqueleto Android
+# Fase 1.1 · Esqueleto web
 
-**Objetivo:** que exista un proyecto Android que arranca, se ve como S-RANK, deja entrar a
-un usuario y le enseña su nivel.
+**Objetivo:** que exista una aplicación que arranca, se ve como S-RANK, deja entrar a un
+usuario y le enseña su nivel.
 
-Es la fase que **define el aspecto de todo lo demás**. Cada componente que se escriba aquí
-lo van a usar las cuatro fases siguientes sin volver a discutirlo, así que vale la pena
-pelearse ahora con el sistema de diseño y no después.
+Es la fase que **define el aspecto de todo lo demás**. Cada componente escrito aquí lo van
+a usar las cuatro fases siguientes sin volver a discutirlo.
 
-## Qué existe cuando empieza
+## El cambio de plataforma
 
-**No hay ni una línea de Kotlin.** El repositorio tiene `backend/`, `docs/` y `old/`.
+Esta fase se empezó en Android, con Kotlin y Jetpack Compose, y llegó a estar casi
+terminada: doce de las trece tareas del plan, 84 tests en verde y un APK instalable. **Se
+descartó el 12 de agosto de 2026** porque el desarrollo en Android incomodaba lo bastante
+como para poner en riesgo que la aplicación llegara a terminarse, y eso pesa más que
+cualquier ventaja técnica.
 
-La API está en producción y verificada: `https://s-rank.israelzamora.es`. Todo lo que esta
-fase necesita del servidor ya funciona.
+Lo caro no se tocó: el backend son 71 rutas JSON agnósticas del cliente, y los tres specs
+describen una interfaz, no una tecnología. El esqueleto de Kotlin sigue recuperable en la
+etiqueta `android-fase-1.1`.
 
-### Lo que se cerró antes de escribir código (11 de agosto de 2026)
+Lo que se ganó al cambiar, además de la comodidad:
 
-La fase se abrió con un repaso del sistema de diseño, porque es lo que condiciona las
-cuatro fases siguientes. De ahí salieron dos documentos y un entorno montado:
+- **La estética sale más barata.** «Texto monoespaciado en filas» es lo que un navegador
+  hace nativamente. La sección plegable es un `<details>` sin una línea de JavaScript, y las
+  flechas `▸`/`▾` las pone el CSS.
+- **La accesibilidad sale de HTML normal**, sin las acrobacias de `clearAndSetSemantics`.
+- **Se despliega por FTP** como el backend. Sin Play Store, sin firmar, sin versiones.
+- **iOS sale gratis**, y estaba fuera de alcance.
 
-| Qué | Dónde |
-|---|---|
-| El sistema de diseño al detalle | `../specs/2026-08-11-core-ui-design.md` |
-| El plan de implementación, 13 tareas | `../plans/2026-08-11-fase-1-1-esqueleto-android.md` |
+Lo que costó, y hay que tener presente en la 1.2:
 
-**El entorno de compilación ya está instalado**, en WSL y sin `sudo`: JDK 21 en `~/jdk`,
-Android SDK en `~/Android/Sdk` y Gradle 9.5.0 en `~/gradle-dist`. El plan lo detalla en su
-sección «Entorno». No hay que instalar nada más.
+- **El borrador sin conexión es más artesanal.** `service worker` + IndexedDB en vez de Room
+  + WorkManager. Es el único punto donde la web da más trabajo que Android, y llega en la
+  fase siguiente.
+- **La notificación diaria de las 20:00** no puede ser local. Tendrá que ser un cron en el
+  servidor con Web Push, que además es mejor arquitectura: el servidor ya sabe qué misiones
+  quedan pendientes.
 
-Cuatro cosas se comprobaron **midiendo, no suponiendo**, y cambian lo que dice el resto de
-este documento:
+## Qué se construyó
 
-- **AGP 9.3.1 cambió el DSL.** `compileSdk = 36` ya no compila: ahora es
-  `compileSdk { version = release(36) }`. Y el plugin `org.jetbrains.kotlin.android` **no
-  se aplica**, porque AGP 9 trae Kotlin dentro. Verificado con un proyecto de prueba que
-  compiló, generó APK y pasó tests con Compose y `kotlinx.serialization`.
-- **JetBrains Mono trae todos los glifos** del diseño (`▓ ░ ▒ █ ▸ ▾ ✓ ◆ ◇ ─ ▔`),
-  comprobado leyendo la tabla `cmap` de la fuente. Cae el respaldo con `Canvas` que el
-  spec dejaba previsto por si faltaban.
-- **Sobre `/mnt/c` la compilación incremental son 15 segundos**, los tests 23 y la fría dos
-  minutos. No hace falta mudar el `buildDir` al disco de WSL.
-- **El `.gitignore` ya tiene lo de Android**, al contrario de lo que decía el aviso de aquí
-  abajo. No hay nada que añadir.
-
-## Qué hay que construir
-
-### El proyecto Gradle
-
-La estructura la fija el spec §3:
+### El proyecto
 
 ```
-settings.gradle.kts  build.gradle.kts  gradlew  gradle/
-app/                  navegación y arranque
-core/system/          nivel, XP, rango, misiones, logros, estadísticas
-core/ui/              sistema de diseño
-data/api/             Retrofit + interceptor de token
-data/session/         DataStore: token y usuario
-feature/auth/         login, registro, recuperar contraseña
+web/
+  src/
+    api.ts             la única puerta a la API: peticiones y traducción de errores
+    componentes.tsx    los ocho componentes del sistema de diseño, todos juntos
+    formato.ts         los cálculos y textos con ramas — es lo que está probado
+    estilos.css        los once colores y la escala tipográfica
+    pantallas/         Login · Registro · Recuperar · Hoy
+    App.tsx            rutas, pestañas y el portero de sesión
+  public/              fuentes, iconos, manifiesto y trabajador de servicio
 ```
 
-Los módulos `feature/training`, `nutrition`, `progress` y `profile` se crean vacíos o no
-se crean: los levanta cada fase cuando le toca.
+**Vite y no Next.js.** Ginernet es FTP sin SSH ni Node: el renderizado en servidor no tiene
+dónde ejecutarse. Vite genera ficheros estáticos y eso sí se sirve. No limita nada, porque
+la aplicación va detrás de un login y no necesita SEO.
 
-~~⚠️ El `.gitignore` de la raíz está escrito para un proyecto Laravel. Hay que añadirle lo
-de Android.~~ **Ya lo tiene**, y por encima de las reglas que protegen `*.sqlite`, `*.sql`
-y `.env*`. Comprobado el 11 de agosto: no hay nada que hacer aquí.
+**CSS plano con variables, no Tailwind.** El sistema de diseño son once colores, una fuente
+y ocho componentes; un framework de utilidades es peso muerto.
 
-### El sistema de diseño — `core/ui/`
+**Un fichero para todos los componentes.** Son pequeños. Ocho ficheros de veinte líneas
+cuestan más de mantener que uno de ciento sesenta.
 
-Está definido entero en el spec §7 y hay que trasladarlo tal cual: once colores, la escala
-tipográfica de cinco tamaños, y los componentes.
+### El sistema de diseño
 
-**JetBrains Mono va empaquetada dentro de la app.** Nunca la monoespaciada del sistema:
-cada fabricante trae una distinta y la estética se rompe en cuanto sales de tu móvil.
+Está definido entero en `../specs/2026-08-11-core-ui-design.md` y se trasladó tal cual:
+once colores con su contraste medido, cinco tamaños de letra, ocho componentes.
+
+**JetBrains Mono va servida desde el propio dominio**, no desde un CDN. Así funciona sin
+conexión y la CSP puede quedarse cerrada a `'self'`.
 
 **El cian `#22d3ee` está reservado a las ventanas del Sistema.** Si aparece en la interfaz
-normal deja de significar «premio» y el momento de recompensa se desactiva. Es la única
-regla de color que no admite excepciones.
+normal deja de significar «premio». Es la única regla de color sin excepciones.
 
-Componentes que quedan escritos aquí y ya no se rediscuten:
+**Sin iconos ni emoji.** La referencia visual de `no_subir_referencias/diseño_buscado/` sí
+los lleva; aquí se descartaron. Los caracteres de dibujo del spec no son iconos.
 
-- Fila de lista con `[✓]` / `[ ]`
-- Cabecera de sección plegable `▸ TÍTULO   [2 de 4] ▾`
-- Comentario `// …` en color apagado
-- Barra de bloques `[▓▓▓▓▓░░░░░]` para XP y agua
-- ~~Barra continua para estadísticas y macros~~ → aplazada a la 1.4, que es donde
-  aparecen las estadísticas
-- Botón con borde visible, 48 dp de alto mínimo
-- Ventana del Sistema con esquinas en ángulo
-- Insignia de rango; ~~rombo de rareza `◆` / `◇`~~ → aplazado a la 1.5, con los logros
-- **`CampoSRank`**, campo de texto — no estaba en esta lista y hace falta: los tres
-  formularios de autenticación lo usan. El spec §5.5 ya legislaba su borde.
+### Autenticación por cookie, no por token
 
-### La capa de datos — `data/`
+El frontend **no guarda ningún token**. La sesión viaja en una cookie `httpOnly` que
+JavaScript no puede leer, así que un XSS no tiene nada que robar — y detrás hay datos de
+salud. Toda escritura manda `X-XSRF-TOKEN`.
 
-`data/api/` es Retrofit con un interceptor que mete `Authorization: Bearer …` y
-`Accept: application/json` en toda petición.
+En el backend eso costó tres cambios pequeños: `statefulApi()`, y que `login` y `register`
+abran sesión **solo si la petición viene del frontend**. Todo lo demás sigue por Bearer sin
+enterarse. Está en `SesionWebTest`.
 
-⚠️ **`Accept: application/json` no es opcional.** Sin esa cabecera el servidor devuelve
-HTML en los errores. Se arregló para que no dé un 500, pero la app debe mandarla siempre.
+### Las pantallas
 
-`data/session/` es DataStore: token y datos del usuario. Un 401 tiene que limpiar la
-sesión y llevar al login, desde cualquier pantalla.
+**Login** — correo y contraseña, con enlaces a recuperar y a crear cuenta.
 
-### Navegación — `app/`
+**Registro** — nombre, correo, contraseña de 8 caracteres mínimo. Deja la sesión abierta.
 
-Tres pestañas: **hoy · progreso · perfil**. Fuera de pestañas: login, registro y recuperar
-contraseña.
+**Recuperar contraseña** — dos pasos. **Avanza al paso 2 sin mirar la respuesta.**
 
-En esta fase `progreso` y `perfil` pueden ser pantallas vacías con un texto. Lo que tiene
-que funcionar es la navegación y que `hoy` pinte la cabecera de progreso real.
+**Hoy** — nivel, rango, barra de XP, racha y misiones del día, de solo lectura. Las
+opcionales van aparte, bajo «si te sobra tiempo».
 
-### Las pantallas de esta fase
-
-**Login** — correo y contraseña. Un enlace a «No recuerdo mi contraseña» y otro a «Crear
-cuenta».
-
-**Registro** — nombre, correo, contraseña. Mínimo 8 caracteres.
-
-**Recuperar contraseña** — dos pasos: pedir el código y luego introducir el código de seis
-cifras más la contraseña nueva. El código caduca a los 30 minutos.
-
-**Hoy**, versión mínima — la cabecera de progreso con nivel, rango, XP y racha, y las
-misiones del día como lista de solo lectura. Las secciones de entreno y nutrición llegan
-en 1.2 y 1.3.
+**Progreso** y **perfil** — huecos con su fase de llegada. Perfil lleva el botón de salir.
 
 ## Endpoints que consume
 
 | | |
 |---|---|
-| `POST /api/auth/login` | `{email, password}` → `{access_token, token_type, user_name, is_admin}` |
-| `POST /api/auth/register` | `{name, email, password}` → 201, mismo cuerpo |
+| `GET /sanctum/csrf-cookie` | reparte el token CSRF antes de la primera escritura |
+| `POST /api/auth/login` | `{email, password}` → 200 y cookie de sesión |
+| `POST /api/auth/register` | `{name, email, password}` → 201 y cookie de sesión |
 | `POST /api/auth/forgot-password` | `{email}` → **200 siempre** |
 | `POST /api/auth/reset-password` | `{email, code, password}` → 200 o 422 |
-| `POST /api/auth/logout` | invalida el token actual |
+| `POST /api/auth/logout` | invalida la sesión |
 | `GET /api/system/today` | progreso + misiones del día + entreno sugerido |
-| `GET /api/system/profile` | progreso + módulos activos |
-| `GET /api/user` | el usuario autenticado |
+| `GET /api/user` | el usuario autenticado, o 401 si no hay sesión |
 
 `forgot-password` responde 200 exista o no el correo, a propósito: decir «ese usuario no
-existe» es regalar una lista de cuentas válidas. **La pantalla tiene que decir siempre lo
-mismo**, algo como «Si ese correo está registrado, te hemos enviado un código». No inventes
-un mensaje distinto para cada caso: reintroducirías la fuga desde el cliente.
+existe» es regalar una lista de cuentas válidas. **La pantalla dice siempre lo mismo.** Si
+solo avanzara cuando la cuenta existe, la fuga que el servidor evita la reabriría el cliente.
 
-## Límites de intentos que vas a encontrar probando
+## Límites de intentos
 
 | Ruta | Límite |
 |---|---|
@@ -152,92 +125,88 @@ un mensaje distinto para cada caso: reintroducirías la fuga desde el cliente.
 | `forgot-password` | 3 por hora |
 | `reset-password` | 5 por hora |
 
-Son por IP. Al desarrollar te los vas a comer. El contador vive en la tabla `cache` de
-MySQL; `DELETE FROM cache;` lo reinicia sin tocar ningún dato.
+Son por IP. **En desarrollo, el navegador y cualquier `curl` comparten el contador**: a
+través del proxy de Vite, Laravel ve todo viniendo de `127.0.0.1`. Se reinicia con
+`mysql -u srank -psrank srank_local -e "DELETE FROM cache;"`.
 
-⚠️ **El 429 llega en inglés**: `{"message":"Too Many Attempts."}`. Lo emite el limitador de
-Laravel antes de entrar en la ruta, así que no pasa por `lang/es` y no se puede traducir
-desde el servidor sin tocar el limitador. **La app tiene que poner su propio texto**, algo
-como «Demasiados intentos. Espera un momento y vuelve a probar». Es el único mensaje de la
-API que no viene ya en castellano.
+⚠️ **El 429 llega en inglés**: `{"message":"Too Many Attempts."}`. Lo emite el limitador
+antes de entrar en la ruta, así que no pasa por `lang/es`. Lo pone `api.ts`, y es el único
+mensaje de la API que no viene ya en castellano.
 
 ## Restricciones
 
-**La estética es decoración.** El `$`, los `//` y los `[✓]` van encima de listas y botones
-normales. Un usuario que no sepa qué es una terminal tiene que poder usar la app entera
-pulsando. Si una pantalla solo se entiende sabiendo lo que es una terminal, está mal.
+**La estética es decoración.** El prompt, los `//` y los `[✓]` van encima de listas y
+botones normales. En HTML eso significa `aria-hidden` en la decoración y el estado dicho
+con palabras.
 
-**Accesibilidad, del spec §7.** Contraste 4,5:1 sobre negro, objetivos táctiles de 48 dp,
-y la maquetación **no puede depender de anchos fijos en caracteres** porque la app respeta
-el tamaño de fuente del sistema. Esto choca de frente con la estética de terminal, que
-invita a alinear con espacios. No lo hagas.
+**Accesibilidad.** Contraste 4,5:1 sobre negro, objetivos táctiles de 48 px, y la
+maquetación **no puede alinear con espacios** porque respeta el tamaño de letra del
+navegador: el hueco lo abre `flex`.
 
-**Los errores se cuentan en español llano.** «No hay conexión» y no «Error 503». Nada de
-códigos HTTP en pantalla.
+**Los errores se cuentan en español llano.** «No hay conexión» y no «Error 503». Ningún
+código HTTP en pantalla. La traducción vive en un solo sitio, `api.ts`.
 
-**Las fechas llegan en UTC.** Convertir a `Europe/Madrid` antes de quedarse con un día, o
-las misiones de hoy aparecerán como las de ayer a partir de medianoche.
+**Las fechas.** El `date` de `/api/system/today` ya llega resuelto por el servidor en
+`Europe/Madrid`: se lee y se escribe en UTC, sin convertir a la zona del navegador.
 
 ## Terminado cuando
 
-- [ ] `./gradlew assembleDebug` compila y la app arranca en un móvil real.
-- [ ] Se puede crear una cuenta desde cero, salir y volver a entrar.
-- [ ] Se puede recuperar la contraseña con el código que llega por correo.
-- [ ] La sesión sobrevive a cerrar y abrir la app.
-- [ ] Un 401 lleva al login limpiando la sesión, desde cualquier pantalla.
-- [ ] `hoy` enseña el nivel, el rango, la barra de XP y la racha reales.
-- [ ] Las misiones del día se ven, con su texto en castellano.
-- [ ] Sin conexión, cada pantalla dice qué pasa en español y ofrece reintentar.
-- [ ] Los ViewModel tienen tests.
-- [ ] Se ve bien con el tamaño de fuente del sistema al máximo.
+- [x] `npm run build` compila y la aplicación arranca.
+- [x] Se puede crear una cuenta desde cero, salir y volver a entrar.
+- [x] Se puede recuperar la contraseña con el código que llega por correo.
+- [x] La sesión sobrevive a recargar y a cerrar el navegador.
+- [x] Un 401 lleva al login limpiando la sesión, desde cualquier pantalla.
+- [x] `hoy` enseña el nivel, el rango, la barra de XP y la racha reales.
+- [x] Las misiones del día se ven, con su texto en castellano.
+- [x] Sin conexión, cada pantalla dice qué pasa en español y ofrece reintentar.
+- [x] Se ve bien con el tamaño de letra del navegador al máximo.
+- [ ] Las pantallas tienen tests.
+- [ ] Instalada en el móvil desde el dominio real, y probada ahí.
 
-## Lo que se limpió antes de empezar
+## Lo que solo aparece fuera de los tests
 
-La fase 1.1 arranca sobre un backend ya repasado. Cuatro cosas cambiaron y afectan a lo
-que la app se encuentra:
+La fase 1.0 dejó cuatro fallos que pasaron 254 tests y solo aparecieron al tocar el
+servidor. Lo de esta lista es de la misma familia.
 
-- **Los errores de validación llegan en español.** `backend/lang/es/validation.php`, con
-  los nombres de campo traducidos: «el correo ya está en uso», no *«The email has already
-  been taken»*. Empiezan en minúscula porque van debajo de un campo; si en pantalla queda
-  mal, se capitaliza al pintarlos en el cliente.
-- **El login ya no devuelve cookie.** Solo `access_token` en el cuerpo. La cookie
-  `fitloop_token` era de la web de FitLoop, viajaba sin cifrar y sin `Secure`.
-- **No hay rutas web.** `/informe-salud` estaba caído (500) y se retiró; la lógica sigue
-  en `ReportController`, sin ruta, esperando a la fase 1.5.
-- **Entrar con un correo que no existe tarda lo mismo que con uno que sí.** Antes no, y
-  ese tiempo decía qué cuentas hay dadas de alta.
+**Verificado ya, contra el Laravel local:**
+
+- El ciclo entero de cookie: `csrf` → `login` → `/api/user` sin `Authorization` → `logout`
+  → 401. La suite **no puede** demostrarlo, porque corre con `SESSION_DRIVER=array`, que no
+  guarda nada entre peticiones.
+- `forgot-password` responde igual, byte a byte, con un correo registrado y con uno
+  inventado.
+- El código de seis cifras sirve una vez; al reutilizarlo, 422.
+
+**Pendiente, y solo se comprueba en el móvil y sobre el dominio real:**
+
+- Que la aplicación se pueda instalar. Los navegadores solo lo ofrecen sobre HTTPS, así que
+  contra el servidor de desarrollo no sale la opción.
+- Que la CSP cerrada de `backend/public/.htaccess` no bloquee nada. Está verificada por
+  inspección del build —ni un script en línea, ni una referencia externa, ni `eval`— pero no
+  en un navegador. Si algo falla, la aplicación sale en blanco y la consola lo dice.
+- El lector de pantalla: que una misión hecha se oiga «Beber 2 litros de agua, hecha», que
+  el prompt no se lea, y que la barra de XP se oiga como un porcentaje.
+- Modo avión con la aplicación ya instalada: tiene que abrirse y explicarlo ella, no la
+  página de error del navegador.
 
 ## Prompt para arrancar el chat
 
-El diseño y el plan **ya están hechos**. Este prompt arranca el chat de desarrollo:
-
 ```
-Seguimos con la fase 1.1 de S-RANK: el esqueleto Android. El sistema de diseño
-está cerrado y el plan de implementación escrito. Toca escribir el código.
+Seguimos con la fase 1.1 de S-RANK. El esqueleto web está construido y probado en
+local; queda desplegarlo y comprobar en el móvil lo que ningún test cubre.
 
-Lee primero, en este orden:
-  docs/superpowers/plans/2026-08-11-fase-1-1-esqueleto-android.md   ← el plan, entero
-  docs/superpowers/specs/2026-08-11-core-ui-design.md               ← el sistema de diseño
-  docs/superpowers/fases/fase-1.1-esqueleto.md                      ← cuándo está terminada
+Lee primero:
+  docs/superpowers/fases/fase-1.1-esqueleto.md      ← qué falta y cuándo está terminada
+  docs/superpowers/specs/2026-08-11-core-ui-design.md
 
-Hay capturas de referencia de la estética en /no_subir_referencias.
-La API está en producción y verificada: https://s-rank.israelzamora.es
+El frontend está en web/ (React + Vite), el backend en backend/ (Laravel, en
+producción). `bash backend/build-deploy.sh` construye el frontend y arma el
+paquete que se sube por FTP.
 
-El entorno ya está instalado, en WSL y sin sudo. Toda orden de Gradle se lanza así:
-  export JAVA_HOME=~/jdk ANDROID_HOME=~/Android/Sdk
-
-No hay ni una línea de Kotlin todavía: se empieza por la tarea 1, el esqueleto
-de Gradle. Ejecuta el plan tarea por tarea con superpowers:subagent-driven-development
-—un subagente nuevo por tarea y revisión entre medias—, parando después de cada
-una para que yo lo mire.
-
-Tres cosas del plan que conviene no olvidar:
-  · AGP 9 cambió el DSL: compileSdk { version = release(36) }, y el plugin
-    org.jetbrains.kotlin.android NO se aplica.
+Tres cosas que conviene no olvidar:
   · Un test que no falla sin el arreglo no vale.
-  · La pantalla de recuperar contraseña dice siempre lo mismo, exista la cuenta
-    o no. Es una regla de seguridad, no una decisión de redacción.
+  · La pantalla de recuperar contraseña avanza siempre, exista la cuenta o no.
+    Es una regla de seguridad, no una decisión de redacción.
+  · La CSP está cerrada a 'self'. Cualquier recurso externo que se añada hay que
+    declararlo en backend/public/.htaccess o el navegador lo bloquea en silencio.
 ```
-
-Si prefieres ejecutarlo en la misma conversación por tandas, cambia esa línea por
-`superpowers:executing-plans`.

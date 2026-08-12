@@ -10,8 +10,13 @@ conexión.
 
 De la **1.0**: la API completa, el Sistema calculando XP y récords en el servidor.
 
-De la **1.1**: el proyecto Gradle, `core/ui/` con todos los componentes, `data/api/` con
-el interceptor de token, `data/session/`, la navegación de tres pestañas y el login.
+De la **1.1**: el proyecto de Vite en `web/`, el sistema de diseño con todos los
+componentes, `api.ts` con la traducción de errores, la sesión por cookie, la navegación de
+tres pestañas y las pantallas de autenticación.
+
+⚠️ **El frontend dejó de ser Android el 12 de agosto de 2026.** Todo lo que este documento
+diga de Room, WorkManager o módulos de Gradle hay que leerlo como el equivalente en web,
+que se detalla más abajo. El porqué está en [fase-1.1](fase-1.1-esqueleto.md).
 
 ## Qué hay que construir
 
@@ -32,14 +37,23 @@ el XP ganado.
 **Cronómetro de descanso** — el spec lo pone en la 1.5, pero durante la sesión hace falta.
 Decide en el momento si lo adelantas; si lo haces, apúntalo como desviación.
 
-### El borrador sin conexión — `data/draft/`
+### El borrador sin conexión
 
-Room con **una sola tabla** que guarda el estado completo de la sesión. Se escribe en cada
-cambio, no al final.
+**IndexedDB** con un solo registro que guarda el estado completo de la sesión. Se escribe
+en cada cambio, no al final.
 
-Al terminar, la sesión entera se manda en un único `POST /api/workouts`. Si el envío
-falla, se encola con WorkManager y se reintenta con retroceso exponencial. La app avisa de
-que hay un entreno pendiente de subir.
+Al terminar, la sesión entera se manda en un único `POST /api/workouts`. Si el envío falla,
+se reintenta al recuperar la conexión y la aplicación avisa de que hay un entreno pendiente
+de subir.
+
+⚠️ **Esta es la parte que se complicó al pasar a web, y hay que presupuestarla.** En Android
+la resolvían Room y WorkManager, que ya traen persistencia y reintento con retroceso
+exponencial. Aquí hay que escribir las dos cosas. Es el único punto de todo el porte donde
+la web da más trabajo que Android.
+
+El trabajador de servicio de la fase 1.1 **no sirve para esto** y no hay que estirarlo: a
+propósito no guarda ninguna respuesta de la API, porque servir el progreso de ayer como si
+fuera el de hoy es peor que decir que no hay conexión.
 
 **El resto de la aplicación requiere conexión.** No se guarda nada más en local. Esto es
 deliberado: sincronizar dos fuentes de verdad es donde mueren estos proyectos, y el único
@@ -119,8 +133,8 @@ finos, y que se vea de un vistazo qué serie toca.
 son decoración encima de controles normales.
 
 **Que no se pierda un entreno jamás.** Es lo único irrecuperable de toda la aplicación: si
-se pierde, el usuario ya no se acuerda de lo que levantó. Escribir en Room en cada cambio,
-no al salir.
+se pierde, el usuario ya no se acuerda de lo que levantó. Escribir en IndexedDB en cada
+cambio, no al salir.
 
 **Las fechas van en UTC.** Mandar la fecha del entreno en la zona correcta y convertir al
 leer.
@@ -134,7 +148,7 @@ leer.
 - [ ] El tercer entreno del día se guarda y se explica que no puntúa.
 - [ ] Las plantillas se crean, se editan y se usan.
 - [ ] El historial se ve, se filtra y se puede abrir un entreno.
-- [ ] Hay tests de ViewModel y del repositorio de borrador.
+- [ ] Hay tests de las pantallas y del borrador: que sobrevive a recargar y a cerrar.
 
 ## Prompt para arrancar el chat
 

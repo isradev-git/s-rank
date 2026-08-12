@@ -103,7 +103,7 @@ calendario y el heatmap saldrán descuadrados en las horas de la noche.
 - [ ] El historial nutricional y la gráfica de peso se ven.
 - [ ] El informe de salud se abre y se puede compartir.
 - [ ] Cada pantalla tiene un estado vacío que explica en castellano.
-- [ ] Hay tests de ViewModel.
+- [ ] Hay tests de las pantallas y de las funciones con ramas.
 
 ## Prompt para arrancar el chat
 

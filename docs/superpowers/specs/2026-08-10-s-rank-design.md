@@ -8,7 +8,13 @@
 
 ## 1. Qué estamos construyendo
 
-S-RANK es una aplicación Android que gobierna hábitos y progreso personal, con estética
+> ⚠️ **Este documento se escribió para Android.** El frontend pasó a web (React + Vite,
+> instalable como PWA) el 12 de agosto de 2026, ya empezada la fase 1.1. Las decisiones de
+> producto —fórmulas, XP, misiones, logros, pantallas, textos— no cambiaron y siguen siendo
+> la referencia. Lo que sí cambió está corregido más abajo; el porqué está en
+> `../fases/fase-1.1-esqueleto.md`.
+
+S-RANK es una aplicación web que gobierna hábitos y progreso personal, con estética
 de terminal y progresión de videojuego inspirada en *Solo Leveling*. La **fase 1** consiste
 en portar la funcionalidad completa de FitLoop —entrenamiento, nutrición, hidratación,
 suplementos, actividad, peso, estadísticas, logros e informe de salud— y construir encima
@@ -37,14 +43,15 @@ comentarios `//` y las casillas `[✓]` son decoración sobre listas y botones n
 | Decisión | Elección | Motivo |
 |---|---|---|
 | Nombre | **S-RANK** | Referencia a *Solo Leveling*; se entiende sin conocer la obra |
-| Plataforma | Kotlin + Jetpack Compose | La UI es texto monoespaciado y filas; casi nada de Material que pelear |
+| Plataforma | **React + TypeScript con Vite**, instalable como PWA | La UI es texto monoespaciado y filas, que es lo que un navegador hace sin pelearse con nadie. Antes fue Kotlin + Compose por el mismo argumento, y resultó valer más aquí |
 | Backend | El Laravel actual, en modo API-only | Ya expone 50+ endpoints JSON con Sanctum Bearer |
 | Hosting | Ginernet, subdominio `rank-s.israelzamora.es` | Deja `fitloop.israelzamora.es` vivo durante la migración |
 | Base de datos | **MySQL** (hoy SQLite) | Ver §5.1 — bloqueante |
 | Usuarios | Varios, cada uno en su móvil | Requiere registro y recuperación de contraseña |
+| Sesión | Cookie `httpOnly`, sin token en el navegador | Hay datos de salud detrás: un token en `localStorage` convierte cualquier XSS en robo de cuenta |
 | Offline | Solo la sesión de entreno en curso | Cubre el caso que duele (sótano sin cobertura) sin pagar el coste de la sincronización bidireccional |
 | Progresión | XP, niveles, rangos E→S, 4 estadísticas, misiones diarias, 40 logros | §6 |
-| Cálculo de XP | En el servidor, nunca en el móvil | Fuente de verdad, no trampeable, y permite reajustar el balanceo sin publicar en Play Store |
+| Cálculo de XP | En el servidor, nunca en el cliente | Fuente de verdad, no trampeable, y permite reajustar el balanceo sin que nadie tenga que actualizar nada |
 | Navegación | 3 pestañas de texto: `hoy · progreso · perfil` | Genéricas a propósito: siguen valiendo cuando la app deje de ser solo deporte |
 | Interacción | Solo pulsar. Sin comandos escritos | Restricción rectora |
 
@@ -60,22 +67,23 @@ móvil), panel de administración y cronómetro.
 ## 3. Estructura del repositorio
 
 ```
-/                       proyecto Gradle de Android
-  settings.gradle.kts   build.gradle.kts   gradlew   gradle/
-  app/                  módulo de aplicación: navegación y arranque
-  core/
-    system/             nivel, XP, rango, misiones, logros, estadísticas
-    ui/                 sistema de diseño: tokens y componentes
-  data/
-    api/                Retrofit + interceptor de token
-    session/            DataStore: token y usuario
-    draft/              Room: una tabla, el borrador de entreno
-  feature/
-    training/  nutrition/  progress/  profile/  auth/
+/
+  web/                  frontend React + TypeScript (Vite)
+    src/
+      api.ts            la única puerta a la API: peticiones y errores traducidos
+      componentes.tsx   el sistema de diseño: tokens aplicados y componentes
+      formato.ts        los cálculos y textos con ramas — lo que se prueba
+      estilos.css       los once colores y la escala tipográfica
+      pantallas/        una por pantalla
+      App.tsx           rutas, pestañas y el portero de sesión
+    public/             fuentes, iconos, manifiesto, trabajador de servicio
   backend/              el Laravel API-only que se sube a Ginernet
   docs/                 specs y planes
   old/                  FitLoop actual, solo lectura
 ```
+
+El borrador de entreno sin conexión (fase 1.2) irá en IndexedDB, no en Room. Es el único
+punto donde la web da más trabajo que Android.
 
 `old/` se crea con `git mv` para conservar el historial y se borra al cerrar la fase 1.
 Mientras dure el porte es la referencia de las reglas de negocio ya validadas: tabla MET
@@ -87,17 +95,24 @@ sin ancla o duplicarlos por ruta.
 
 ---
 
-## 4. Arquitectura Android
+## 4. Arquitectura del frontend
 
 ### 4.1 Núcleo y módulos
 
 La aplicación son dos cosas separadas que se comunican en una sola dirección.
 
-**El Sistema** (`core/system/`) sabe de niveles, XP, rangos, misiones, estadísticas,
-rachas y logros. No sabe qué es una sentadilla ni una caloría.
+**El Sistema** sabe de niveles, XP, rangos, misiones, estadísticas, rachas y logros. No
+sabe qué es una sentadilla ni una caloría.
 
-**Los módulos** (`feature/*`) saben de su dominio y no saben nada del Sistema. Publican
-eventos; el Sistema decide qué hacer con ellos.
+**Los módulos** saben de su dominio y no saben nada del Sistema. Publican eventos; el
+Sistema decide qué hacer con ellos.
+
+⚠️ En Android esta separación la vigilaba el grafo de dependencias de Gradle:
+`core/system` no podía declarar `feature/*`, y de eso se encargaba el compilador. **En web
+no la vigila nadie**, y no se va a montar un sistema de módulos falso para fingirlo. Con
+cinco pantallas basta la disciplina de carpetas; cuando no baste, la herramienta es
+`eslint-plugin-boundaries`. Donde de verdad se calcula todo es en el backend, y allí la
+separación sí existe (§5.3).
 
 ```
 módulo                →  evento               →  el Sistema decide
@@ -119,10 +134,15 @@ La misma separación existe en el backend, donde los eventos son eventos de Lara
 
 ### 4.2 Capas
 
-- **UI** — Compose, estado inmutable, sin lógica de negocio.
-- **ViewModel** — un `StateFlow<UiState>` por pantalla. Es lo único que se prueba con tests.
-- **Repositorio** — Retrofit contra la API; expone modelos de dominio, nunca DTOs.
-- **Local** — DataStore para token y usuario; Room con una única tabla para el borrador.
+- **Pantalla** — un componente de React por pantalla, con su estado de carga, su fallo y su
+  botón de reintentar. Sin lógica de negocio.
+- **`api.ts`** — la única puerta a la API. Traduce los errores una vez y expone funciones
+  con nombre, no rutas sueltas por ahí.
+- **`formato.ts`** — los cálculos y textos que tienen ramas de verdad, fuera de los
+  componentes para poderse probar sin montar React. Es lo que está probado.
+- **Sesión** — una cookie `httpOnly` que pone el servidor. **No hay token en el navegador**:
+  con datos de salud detrás, un token en `localStorage` convierte cualquier XSS en robo de
+  cuenta.
 
 ---
 
@@ -134,7 +154,7 @@ pasarle un enlace al médico. El 90% de la API existente se reutiliza sin cambio
 
 ### 5.1 Los cuatro arreglos obligatorios
 
-Van antes que cualquier código de Android. Los cuatro son bloqueantes.
+Van antes que cualquier código de la aplicación. Los cuatro son bloqueantes.
 
 **1 · SQLite → MySQL.** `build-deploy.sh` copia `database/database.sqlite` dentro de
 `deploy/`, de modo que cada subida por FTP sobrescribe los datos de producción con los
@@ -422,14 +442,14 @@ Escala: 20 título · 16 sección · 13 cuerpo · 11,5 nota · 10,5 etiqueta en 
 
 Fila de lista con `[✓]` / `[ ]` · cabecera de sección `▸ TÍTULO   [2 de 4] ▾` ·
 comentario `// …` · barra de bloques `[▓▓▓▓▓░░░░░]` para XP y agua · barra continua para
-estadísticas y macros · botón con borde visible y 48 dp de alto mínimo · ventana del
+estadísticas y macros · botón con borde visible y 48 px de alto mínimo · ventana del
 Sistema con esquinas en ángulo · insignia de rango · rombo de rareza `◆` / `◇`.
 
 ### Accesibilidad
 
 Contraste mínimo 4,5:1 sobre negro para todo el texto de contenido (los seis colores de
 acento lo cumplen; `#52525b` solo se usa en texto secundario nunca esencial). Objetivos
-táctiles de 48 dp. La app respeta el tamaño de fuente del sistema: la maquetación no
+táctiles de 48 px. La app respeta el tamaño de fuente del sistema: la maquetación no
 puede depender de anchos fijos en caracteres.
 
 ---
@@ -461,10 +481,16 @@ Cuando llegue un módulo en la fase 2, **`hoy` gana una sección, no una pestañ
 Solo la sesión de entreno en curso. Es el caso que duele de verdad: los sótanos de
 gimnasio no tienen cobertura.
 
-El borrador se guarda en Room en cada cambio, con una sola tabla que almacena el estado
-completo de la sesión. Al terminar se envía entero en un `POST /api/workouts`. Si el
-envío falla, se encola con WorkManager y se reintenta con retroceso exponencial; la app
-avisa de que hay un entreno pendiente de subir.
+El borrador se guarda en IndexedDB en cada cambio, en un solo registro con el estado
+completo de la sesión. Al terminar se envía entero en un `POST /api/workouts`. Si el envío
+falla, se reintenta al recuperar la conexión y la aplicación avisa de que hay un entreno
+pendiente de subir.
+
+⚠️ Esto lo diseña la fase 1.2 y **es la parte que se complicó al pasar a web**: en Android
+lo resolvían Room y WorkManager, que ya traen persistencia y reintento con retroceso
+exponencial. Aquí hay que escribirlo. No se improvisa desde el trabajador de servicio de la
+fase 1.1, que a propósito no guarda ninguna respuesta de la API: servir el progreso de ayer
+como si fuera el de hoy es peor que decir que no hay conexión.
 
 El resto de la aplicación requiere conexión y muestra un estado de error legible —nunca
 un código HTTP— con opción de reintentar.
@@ -510,8 +536,9 @@ conocido · el desbloqueo de logros en sus umbrales exactos.
 Es la lógica donde un error silencioso corrompe la progresión de todos los usuarios y no
 se detecta hasta meses después.
 
-**Android, con JUnit.** Los ViewModels de `core/system` y de la sesión de entreno,
-incluida la persistencia y recuperación del borrador.
+**Frontend, con Vitest.** Los cálculos y textos con ramas —`formato.ts`— y las pantallas
+que tienen estados que se pueden equivocar: la de recuperar contraseña, que debe avanzar
+igual exista la cuenta o no, y la sesión de entreno con su borrador.
 
 No se prueba el resto de la interfaz. No compensa.
 
@@ -533,7 +560,7 @@ fase 1 termine.
 | | Contenido | Por qué en ese orden |
 |---|---|---|
 | **1.0** | Reorganizar el repositorio · MySQL · los 4 arreglos · tablas y endpoints del Sistema · auth móvil | Sin esto no hay nada que pintar |
-| **1.1** | Esqueleto Android: navegación, sistema de diseño, login y registro | Define el aspecto de todo lo demás |
+| **1.1** | Esqueleto web: navegación, sistema de diseño, login, registro y PWA | Define el aspecto de todo lo demás |
 | **1.2** | Módulo de entrenamiento, incluido el borrador offline | Es el 40% de la app y lo más complejo |
 | **1.3** | Nutrición, agua, suplementos, actividad, recetas | El segundo bloque grande |
 | **1.4** | Progreso: historial, calendario, gráficas, récords | Vive de los datos de 1.2 y 1.3 |
