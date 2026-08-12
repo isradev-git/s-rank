@@ -241,17 +241,20 @@ body {
   font-size: var(--nota);
 }
 
+/* Más apretada que el resto de la página: en la referencia las filas van pegadas y es
+   lo que hace que se lea como la salida de un comando y no como una lista de la compra. */
 .lista-misiones {
   list-style: none;
   padding: 0;
-  margin: 0.5rem 0 0;
+  margin: 0.25rem 0 0;
+  line-height: 1.45;
 }
 
 .fila-mision {
   display: flex;
   gap: 0.5ch;
   align-items: baseline;
-  padding: 0.25rem 0;
+  padding: 0.1rem 0;
 }
 
 .fila-mision .marca {

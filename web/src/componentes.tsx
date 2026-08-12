@@ -4,19 +4,16 @@
    el lector de pantalla no la lea. Spec §5.1. */
 
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import { BLOQUES, bloquesEncendidos } from "./barra";
+import type { Mision } from "./api";
+import { BLOQUES, bloquesEncendidos } from "./formato";
 
 // A diferencia del NumberFormat de Java, Intl.NumberFormat sí se puede compartir:
 // no guarda estado entre llamadas, y construirlo cada vez es caro.
-const NUMEROS = new Intl.NumberFormat("es-ES");
-
-export type Mision = {
-  key: string;
-  label: string;
-  target: number | null;
-  progress: number | null;
-  completed: boolean;
-};
+//
+// `useGrouping: "always"` no sobra. En español los números de cuatro cifras van sin
+// separador, así que por defecto esto daría «5240», mientras la etiqueta que manda el
+// servidor dice «8.000 pasos». Las dos formas juntas en la misma fila parecen un fallo.
+const NUMEROS = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
 
 /** `israel[E]@s-rank $ hoy`.
  *

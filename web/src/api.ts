@@ -131,6 +131,37 @@ export async function pedir<T>(
 
 export type Usuario = { name: string; email: string; is_admin: boolean };
 
+// ── El Sistema ──────────────────────────────────────────────────────────────
+
+export type Progreso = {
+  level: number;
+  rank: string;
+  xp_into_level: number;
+  xp_for_next: number;
+  current_streak: number;
+};
+
+export type Mision = {
+  key: string;
+  label: string;
+  target: number | null;
+  progress: number | null;
+  xp_reward: number;
+  is_optional: boolean;
+  completed: boolean;
+};
+
+export type DiaDeHoy = {
+  /** Ya viene como fecha suelta, calculada por el servidor en Europe/Madrid. */
+  date: string;
+  progress: Progreso;
+  quests: Mision[];
+};
+
+export function diaDeHoy() {
+  return pedir<DiaDeHoy>("/system/today");
+}
+
 export function entrar(email: string, password: string) {
   return pedir<{ user_name: string }>("/auth/login", {
     metodo: "POST",
