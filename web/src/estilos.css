@@ -215,8 +215,12 @@ body {
   text-transform: uppercase;
 }
 
-/* Las dos flechas las pone el CSS a partir de si el <details> está abierto. Así el
-   estado sale del elemento nativo y no de un useState que habría que mantener. */
+/* Son dos flechas distintas, y solo una es un indicador de estado (spec §5, línea 289):
+   la `inicial` es una viñeta fija, como el marcador de una lista, y no cambia nunca;
+   la `final` es la que dice si está plegado o desplegado. Esa la pone el CSS a partir
+   de [open], así el estado sale del <details> nativo y no de un useState que mantener.
+   Las dos van aria-hidden: quien no ve la pantalla ya oye «desplegado» del propio
+   elemento. */
 .seccion .flecha {
   color: var(--ambar);
 }
