@@ -38,7 +38,7 @@ Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qu
 | Fase | Estado |
 |---|---|
 | 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
-| 1.1 · Esqueleto web: navegación, diseño, login, PWA | **en curso**, sin desplegar |
+| 1.1 · Esqueleto web: navegación, diseño, login, PWA | **en curso**, ya desplegada; falta probarla en el móvil |
 | 1.2 · Entrenamiento, con borrador sin conexión | pendiente |
 | 1.3 · Nutrición, agua, suplementos, actividad | pendiente |
 | 1.4 · Progreso: historial, calendario, gráficas | pendiente |
@@ -218,6 +218,11 @@ si alguno se cuela en el paquete que se sube por web.
 correo, a propósito, y paga el mismo bcrypt en las dos ramas para que tampoco lo delate el
 reloj. La pantalla de recuperar **avanza al paso 2 sin mirar la respuesta**: si solo
 avanzara cuando la cuenta existe, la fuga que el servidor evita la reabriría el cliente.
+
+**El `.htaccess` de la raíz tiene que reenviar `X-XSRF-Token` a PHP,** igual que ya reenviaba
+`Authorization` para el Bearer del móvil. Algunas configuraciones de CGI se comen las
+cabeceras que no reconocen; si esa se pierde, **toda escritura contesta 419** y no hay forma
+de verlo hasta estar en el servidor, porque en local Vite y Laravel hablan sin Apache en medio.
 
 **La CSP de `backend/public/.htaccess` está cerrada a `'self'`.** Sobrescribe la que
 inyecta Ginernet, que si no bloquea la aplicación. Si algún día se añade una fuente, un

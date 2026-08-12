@@ -161,6 +161,8 @@ código HTTP en pantalla. La traducción vive en un solo sitio, `api.ts`.
 - [x] Sin conexión, cada pantalla dice qué pasa en español y ofrece reintentar.
 - [x] Se ve bien con el tamaño de letra del navegador al máximo.
 - [x] Las pantallas tienen tests.
+- [x] Desplegada en `https://s-rank.israelzamora.es` y funcionando: se crea cuenta, se entra
+      y se ven las misiones del día.
 - [ ] Instalada en el móvil desde el dominio real, y probada ahí.
 
 ## Lo que solo aparece fuera de los tests
@@ -177,13 +179,25 @@ servidor. Lo de esta lista es de la misma familia.
   inventado.
 - El código de seis cifras sirve una vez; al reutilizarlo, 422.
 
-**Pendiente, y solo se comprueba en el móvil y sobre el dominio real:**
+**Verificado ya, en producción** (12 de agosto de 2026, primer despliegue web):
+
+- **La CSP cerrada no bloquea nada.** Se pinta la pantalla entera, con la fuente incluida.
+  Era el riesgo gordo: si hubiera fallado, la aplicación sale en blanco.
+- **La cookie de sesión viaja sobre el dominio real.** `/api/system/today` devuelve datos sin
+  `Authorization`. Es lo que la suite **no puede** demostrar por el `SESSION_DRIVER=array`.
+- **`X-XSRF-TOKEN` sobrevive a LiteSpeed.** Se creó una cuenta desde la propia aplicación, y
+  eso es un POST: sin el reenvío del `.htaccess` de la raíz habría contestado 419.
+- **`/api/*` inexistente devuelve 404 JSON**, no el `index.html`. La guarda del fallback
+  aguanta fuera de los tests.
+- **Los ficheros internos no se sirven**: `.env`, `.git/`, `vendor/`, `storage/logs/`,
+  `composer.json`, `artisan`, `phpunit.xml` y compañía dan 403.
+- **La fecha sale bien**: «miércoles, 12 de agosto», sin desfase de zona.
+
+**Pendiente, y solo se comprueba en el móvil:**
 
 - Que la aplicación se pueda instalar. Los navegadores solo lo ofrecen sobre HTTPS, así que
-  contra el servidor de desarrollo no sale la opción.
-- Que la CSP cerrada de `backend/public/.htaccess` no bloquee nada. Está verificada por
-  inspección del build —ni un script en línea, ni una referencia externa, ni `eval`— pero no
-  en un navegador. Si algo falla, la aplicación sale en blanco y la consola lo dice.
+  contra el servidor de desarrollo no salía la opción. El manifiesto ya se sirve con
+  `application/manifest+json`, que es el MIME que exige el instalador.
 - El lector de pantalla: que una misión hecha se oiga «Beber 2 litros de agua, hecha», que
   el prompt no se lea, y que la barra de XP se oiga como un porcentaje.
 - Modo avión con la aplicación ya instalada: tiene que abrirse y explicarlo ella, no la
@@ -192,8 +206,9 @@ servidor. Lo de esta lista es de la misma familia.
 ## Prompt para arrancar el chat
 
 ```
-Seguimos con la fase 1.1 de S-RANK. El esqueleto web está construido y probado en
-local; queda desplegarlo y comprobar en el móvil lo que ningún test cubre.
+Seguimos con la fase 1.1 de S-RANK. El esqueleto web ya está desplegado y funcionando
+en https://s-rank.israelzamora.es; queda comprobar en el móvil lo que ningún test cubre:
+instalarla como PWA, el lector de pantalla y el modo avión.
 
 Lee primero:
   docs/superpowers/fases/fase-1.1-esqueleto.md      ← qué falta y cuándo está terminada
