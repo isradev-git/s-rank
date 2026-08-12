@@ -45,6 +45,29 @@ rsync -a \
 # .env de producción -> .env  (MySQL de Ginernet, APP_DEBUG=false)
 cp .env.produccion deploy/.env
 
+# ── Frontend ──────────────────────────────────────────────────────────────────
+# El build de React va dentro de public/, que es lo que sirve Apache. Así el frontend y
+# la API comparten dominio, y la cookie de sesión funciona sin CORS y sin bajar SameSite:
+# es la misma condición que en desarrollo consigue el proxy de Vite.
+#
+# Va DESPUÉS del rsync a propósito: se superpone al public/ de Laravel sin borrar su
+# index.php ni su .htaccess, que son los que mandan a la API todo lo que no sea un
+# fichero de verdad.
+if [[ ! -d ../web/node_modules ]]; then
+  echo "Instalando dependencias del frontend..."
+  ( cd ../web && npm ci )
+fi
+
+echo "Construyendo el frontend..."
+( cd ../web && npm run build )
+
+rsync -a ../web/dist/ deploy/public/
+
+if [[ ! -f deploy/public/index.html ]]; then
+  echo "ERROR: el frontend no ha llegado a deploy/public/. Abortando." >&2
+  exit 1
+fi
+
 # Datos efímeros de desarrollo: no viajan
 find deploy/storage/framework/sessions \
      deploy/storage/framework/cache \
