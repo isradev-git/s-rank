@@ -229,6 +229,18 @@ inyecta Ginernet, que si no bloquea la aplicación. Si algún día se añade una
 icono o una librería de fuera, hay que abrirle hueco ahí o el navegador lo bloqueará sin
 que se vea nada en la interfaz.
 
+**El `Referrer-Policy` no puede ser `no-referrer`: deja a todo el mundo fuera.** Sanctum
+decide si una petición viene del frontend con `referer ?: origin`, y un `fetch` de tipo GET
+no manda `Origin` —solo lo llevan los que no son GET—, así que el `Referer` es el único que
+llega. Sin él la petición deja de ser stateful, la cookie de sesión se ignora y `/api/user`
+contesta **401 con la sesión recién abierta**: el login responde 200 y la aplicación no
+entra. Pasó en producción el 18 de agosto. Tiene que quedarse en `same-origin`, que no
+filtra URLs a terceros y sí manda el `Referer` dentro del dominio.
+
+⚠️ Y la lección general: **que una cabecera salga en el `curl` demuestra que está puesta,
+no que la aplicación funcione.** Cualquier cabecera nueva se prueba entrando con una cuenta
+de verdad.
+
 ## Cómo trabajar aquí
 
 **Un test que no falla sin el arreglo no vale.** Al corregir un fallo: quita el arreglo,

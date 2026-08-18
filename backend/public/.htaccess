@@ -17,9 +17,16 @@
     # decide que un .jpg es HTML, ese HTML se ejecuta con la sesión del usuario dentro.
     Header always set X-Content-Type-Options "nosniff"
 
-    # La URL de una pantalla puede llevar datos dentro (/entrenos/482, /alimentos?q=...).
-    # Sin esto, cualquier petición a otro dominio se la lleva puesta en la cabecera.
-    Header always set Referrer-Policy "no-referrer"
+    # La URL de una pantalla puede llevar datos dentro (/entrenos/482, /alimentos?q=...),
+    # y a otro dominio no se le manda nada. Pero dentro de este sí, y tiene que ser así:
+    #
+    # ⚠️ «no-referrer» ROMPE EL LOGIN ENTERO. Sanctum decide si una petición viene del
+    # frontend con `referer ?: origin` (EnsureFrontendRequestsAreStateful.php:75) y un GET
+    # de fetch no manda Origin. Sin Referer no queda ninguno de los dos: la petición deja
+    # de ser stateful, la cookie de sesión se ignora y /api/user contesta 401 con la sesión
+    # recién abierta. Se probó en producción el 18 de agosto y así fue: login 200 y acto
+    # seguido 401. «same-origin» manda el Referer completo aquí dentro y nada fuera.
+    Header always set Referrer-Policy "same-origin"
 
     # Un año de HTTPS obligatorio. Sin «preload»: eso se pide en una lista externa, se
     # aplica al dominio entero y no se puede deshacer a tiempo si algo va mal.

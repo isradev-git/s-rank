@@ -213,6 +213,32 @@ aplicación en silencio, y esta orden es la forma de verlo.
 Las tres solo se ven aquí. La suite corre con `SESSION_DRIVER=array` y sin Apache en medio,
 así que ni la duración de la cookie ni las cabeceras pasan por ningún test.
 
+### Y la cabecera que rompió el login el mismo día
+
+`Referrer-Policy: no-referrer` **dejó a todo el mundo fuera de la aplicación**, con las
+cuatro cabeceras saliendo perfectas en el `curl`. El síntoma: `POST /api/auth/login`
+contestaba 200 y el `GET /api/user` siguiente, 401. El botón se quedaba en «ENTRANDO…».
+
+Sanctum decide si una petición viene del frontend con `referer ?: origin`
+(`EnsureFrontendRequestsAreStateful.php:75`). Un `fetch` de tipo GET **no manda `Origin`**
+—solo lo llevan los que no son GET— así que el `Referer` era el único de los dos que
+llegaba. Al quitarlo, la petición deja de ser stateful, la cookie de sesión se ignora y
+Sanctum busca un Bearer que en el navegador no existe.
+
+Reproducido contra el Laravel local, con la misma cookie y cambiando solo esa cabecera:
+
+| `GET /api/user` | |
+|---|---|
+| con `Referer` | 200 |
+| sin `Referer` ni `Origin` | 401 |
+
+Arreglado con `Referrer-Policy: same-origin`, que manda el `Referer` completo dentro del
+dominio y nada fuera: la intención de no filtrar URLs a terceros se mantiene entera.
+
+**Lo que hay que aprender de esto:** que las cuatro cabeceras salgan en el `curl` demuestra
+que están puestas, **no que la aplicación funcione**. La comprobación de verdad es entrar
+con una cuenta y ver `hoy`. Cualquier cabecera nueva se prueba así antes de darla por buena.
+
 ## Recordatorio
 
 `old/database/database.sqlite` y `old/database/database.2026-05-backup.sqlite` son la
