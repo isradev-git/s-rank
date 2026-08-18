@@ -54,7 +54,8 @@ No hay que ir a mirarlos: están comprobados contra el backend de esta rama.
 
 - `workouts.id` y `templates.id` son **`char(36)`**, o sea cadenas UUID. `template_exercises.id` es un entero.
 - `POST /api/workouts` devuelve el entreno + `new_records` + `system`.
-- **`system.records` tiene la misma forma que `new_records`:** `{name, weight_kg, previous_pr, is_first}`. El ejemplo del spec §5.3 (`{exercise, kind, value}`) **no** es lo que devuelve el código.
+- **`new_records` y `system.records` son el mismo récord con dos formas distintas.** El de primer nivel, `new_records`, es `{name, weight_kg, previous_pr, is_first}`. El de dentro del bloque, `system.records`, pasa antes por `SystemService::formatRecords()` y sale como **`{exercise, kind, value, previous}`** — la forma del spec §5.3, más `previous`. Confirmado por `SystemRewardsTest::test_guardar_un_entreno_devuelve_el_bloque_system_con_xp`, que afirma sobre `system.records.0.exercise`. **La interfaz consume siempre `system.records`**, que es la que llega en toda respuesta con bloque `system`; `new_records` se tipa por completitud y no lo lee nadie.
+- `previous == null` en `system.records` significa que era la primera marca: `formatRecords` lo pone a `null` justo cuando `previous_pr` lo era. No hace falta el `is_first` de `new_records` para distinguirlo.
 - `system.progress` = `{level, rank, xp_total, xp_into_level, xp_for_next, current_streak, longest_streak, stats}`.
 - `GET /api/exercises/records` devuelve `[{name, max_weight, reps, sets, date}]`. `max_weight` sale de una consulta cruda: hay que pasarlo por `Number()`.
 - `GET /api/exercises/suggestions?q=` devuelve un **array de cadenas**, solo del historial del usuario.
@@ -1057,8 +1058,8 @@ lo que decide el XP: 50 puntos a partir de 15 minutos."
 - Modificar: `web/src/formato.test.ts`
 
 **Interfaces:**
-- Consume: los tipos `Ejercicio` y `Serie` de `borrador.ts` (tarea 1), y `NuevoRecord` de
-  `api.ts` (tarea 6).
+- Consume: los tipos `Ejercicio` y `Serie` de `borrador.ts` (tarea 1), y `RecordDelSistema`
+  de `api.ts` (tarea 6) — **no `NuevoRecord`**: la interfaz lee siempre `system.records`.
 - Produce: `volumenTotal(ejercicios): number`, `seriesHechas(ejercicios): number`,
   `duracionMinutos(inicio, ahora?): number`, `textoAntiguedad(inicio, ahora?): string`,
   `textoXpGanado(xpGanado, duracionMinutos): string`, `textoRecord(record): string`.
@@ -1175,9 +1176,11 @@ test("el tercer entreno del día se explica sin decir por qué exactamente", () 
 });
 
 test("un récord se anuncia con su marca anterior, o dice que es la primera", () => {
-  expect(textoRecord({ name: "Press banca", weight_kg: 85, previous_pr: 80, is_first: false }))
+  // La forma es la de `system.records`, que es la que llega en toda respuesta con bloque
+  // `system` y la única que lee la interfaz.
+  expect(textoRecord({ exercise: "Press banca", kind: "weight", value: 85, previous: 80 }))
     .toBe("Press banca: 85 kg, antes 80 kg.");
-  expect(textoRecord({ name: "Peso muerto", weight_kg: 100, previous_pr: null, is_first: true }))
+  expect(textoRecord({ exercise: "Peso muerto", kind: "weight", value: 100, previous: null }))
     .toBe("Peso muerto: 100 kg, tu primera marca.");
 });
 ```
@@ -1193,7 +1196,7 @@ Añadir al final de `web/src/formato.ts`:
 
 ```ts
 import type { Ejercicio } from "./borrador";
-import type { NuevoRecord } from "./api";
+import type { RecordDelSistema } from "./api";
 
 /** Kilos movidos: peso × repeticiones, sumado. Es lo que alimenta la estadística de
  *  Fuerza en el servidor (spec §6.4). Una serie a medio rellenar no cuenta: 80 kg por
@@ -1257,10 +1260,12 @@ export function textoXpGanado(xpGanado: number, duracion: number): string {
   return "Guardado. Hoy ya has llegado al máximo de XP, así que este entreno no suma.";
 }
 
-export function textoRecord(record: NuevoRecord): string {
-  return record.is_first || record.previous_pr == null
-    ? `${record.name}: ${record.weight_kg} kg, tu primera marca.`
-    : `${record.name}: ${record.weight_kg} kg, antes ${record.previous_pr} kg.`;
+/** Recibe la forma del bloque `system`, que es la que lee toda la interfaz. `previous` a
+ *  `null` es la primera marca de ese ejercicio. */
+export function textoRecord(record: RecordDelSistema): string {
+  return record.previous == null
+    ? `${record.exercise}: ${record.value} kg, tu primera marca.`
+    : `${record.exercise}: ${record.value} kg, antes ${record.previous} kg.`;
 }
 ```
 
@@ -1305,7 +1310,7 @@ de adivinar cuál fue."
 **Interfaces:**
 - Consume: `pedir`, `ErrorApi` y `DiaDeHoy`, ya en el fichero. `Modo` y `EntrenoPayload`
   de `borrador.ts` (tareas 1 y 3).
-- Produce: los tipos `NuevoRecord`, `BloqueSistema`, `EntrenoGuardado`, `Plantilla`,
+- Produce: los tipos `NuevoRecord`, `RecordDelSistema`, `BloqueSistema`, `EntrenoGuardado`, `Plantilla`,
   `EjercicioPlantilla`, `EntrenoSugerido`, `RecordPersonal`, `SerieAnterior`; y las
   funciones `entrenos`, `guardarEntreno`, `plantillas`, `crearPlantilla`,
   `editarPlantilla`, `borrarPlantilla`, `sugerenciasEjercicio`, `catalogoEjercicios`,
@@ -1426,16 +1431,26 @@ Añadir al final de `web/src/api.ts`:
 
 import type { EntrenoPayload, Modo } from "./borrador";
 
-/** Un récord recién batido, tal y como lo devuelve el servidor.
+/** Un récord recién batido, en el campo de primer nivel `new_records`.
  *
- *  ⚠️ El bloque `system` lleva sus récords con **esta misma forma**, no con la
- *  `{exercise, kind, value}` del ejemplo del spec §5.3: el listener le pasa al Sistema el
- *  mismo array que construye `WorkoutController::store`. */
+ *  ⚠️ **Dentro del bloque `system` el mismo récord llega con otra forma**, la de
+ *  `RecordDelSistema`: `SystemService::formatRecords()` lo traduce antes de meterlo ahí.
+ *  Este tipo se declara por completitud de la respuesta; **la interfaz lee siempre
+ *  `system.records`**, que es la que viene en toda respuesta con bloque `system`. */
 export type NuevoRecord = {
   name: string;
   weight_kg: number;
   previous_pr: number | null;
   is_first: boolean;
+};
+
+/** El mismo récord tal y como sale dentro del bloque `system`. `previous` a `null`
+ *  significa que era la primera marca: no hace falta un `is_first` aparte. */
+export type RecordDelSistema = {
+  exercise: string;
+  kind: string;
+  value: number;
+  previous: number | null;
 };
 
 export type Logro = { key: string; name: string; rarity: string };
@@ -1445,7 +1460,7 @@ export type BloqueSistema = {
   level_up: { from: number; to: number } | null;
   rank_up: { from: string; to: string } | null;
   achievements_unlocked: Logro[];
-  records: NuevoRecord[];
+  records: RecordDelSistema[];
   quests_completed: string[];
   progress: Progreso & {
     xp_total: number;
@@ -1552,7 +1567,13 @@ export function borrarPlantilla(id: string) {
 
 // ── Ejercicios ──────────────────────────────────────────────────────────────
 
-export type RecordPersonal = { name: string; max_weight: number; reps: number | null; date: string };
+export type RecordPersonal = {
+  name: string;
+  max_weight: number;
+  reps: number | null;
+  sets: number | null;
+  date: string;
+};
 
 export type SerieAnterior = {
   weight_kg: number | null;
@@ -1641,10 +1662,11 @@ git commit -m "feat(entreno): la puerta a los endpoints de entrenamiento
 Entrenos, plantillas y ejercicios, con sus tipos. Tres cosas que se han
 comprobado contra el backend y que no coinciden con lo que uno esperaría:
 
-El bloque system devuelve sus récords con la forma de new_records
-—{name, weight_kg, previous_pr, is_first}—, no con la {exercise, kind,
-value} del ejemplo del spec §5.3. El listener le pasa al Sistema el mismo
-array que construye el controlador.
+El mismo récord llega dos veces y con dos formas: new_records, el campo de
+primer nivel, es {name, weight_kg, previous_pr, is_first}; system.records
+pasa antes por SystemService::formatRecords() y sale como {exercise, kind,
+value, previous}. La interfaz lee siempre el del bloque system, que es el
+que viene en toda respuesta que lo trae.
 
 max_weight de /exercises/records sale de una consulta cruda y puede llegar
 como cadena. Se normaliza en api.ts y no en cada pantalla: si una sola se
@@ -1668,7 +1690,7 @@ nadie lo leyera. Ahora está declarado."
 - Crear: `web/src/componentes.test.tsx`
 
 **Interfaces:**
-- Consume: `BloqueSistema`, `NuevoRecord` de `api.ts` (tarea 6); `textoRecord` de
+- Consume: `BloqueSistema`, `RecordDelSistema` de `api.ts` (tarea 6); `textoRecord` de
   `formato.ts` (tarea 5).
 - Produce: `<Aviso tono="rojo" | "ambar">`, `<VentanaSistema sistema={} alCerrar={} />`,
   y la propiedad `compacto` de `<Boton>`.
@@ -2820,10 +2842,10 @@ En `marcarSerie`, dentro del `if (!serie.hecha)`, después de arrancar el descan
       if (serie.weight_kg != null && mejor != null && serie.weight_kg > mejor) {
         setRecordBatido(
           textoRecord({
-            name: ejercicioActual.name,
-            weight_kg: serie.weight_kg,
-            previous_pr: mejor,
-            is_first: false,
+            exercise: ejercicioActual.name,
+            kind: "weight",
+            value: serie.weight_kg,
+            previous: mejor,
           }),
         );
       }
@@ -3219,7 +3241,9 @@ test("un récord abre la ventana del Sistema", () => {
     ...BASE,
     guardado: {
       new_records: [{ name: "Press banca", weight_kg: 85, previous_pr: 80, is_first: false }],
-      system: sistema({ records: [{ name: "Press banca", weight_kg: 85, previous_pr: 80, is_first: false }] }),
+      system: sistema({
+        records: [{ exercise: "Press banca", kind: "weight", value: 85, previous: 80 }],
+      }),
     } as unknown as EntrenoGuardado,
   });
 
@@ -3298,10 +3322,12 @@ export default function Resumen() {
         <>
           <p className="xp">{textoXpGanado(guardado.system.xp_gained, duracion)}</p>
 
-          {guardado.new_records.length > 0 && (
+          {/* Del bloque `system`, no de `new_records`: es la forma que lee toda la
+              interfaz, y las dos traen exactamente los mismos récords. */}
+          {guardado.system.records.length > 0 && (
             <ul className="lista-records">
-              {guardado.new_records.map((record) => (
-                <li key={record.name}>{textoRecord(record)}</li>
+              {guardado.system.records.map((record) => (
+                <li key={record.exercise}>{textoRecord(record)}</li>
               ))}
             </ul>
           )}
@@ -4716,7 +4742,8 @@ suite en verde no decía nada de eso."
    obligatorio en `DiaDeHoy`. El arreglo está en el paso 7 de esa misma tarea.
 
 **Tres cosas que este plan da por ciertas y conviene no volver a discutir:** el bloque
-`system` devuelve los récords con la forma de `new_records` y no la del spec §5.3;
+`system` devuelve los récords con la forma `{exercise, kind, value, previous}` del spec
+§5.3 y no con la de `new_records`, y es esa la que lee la interfaz;
 `max_weight` puede llegar como cadena; y `PUT /api/templates` descarta todo lo que no sea
 nombre, series y reps.
 
