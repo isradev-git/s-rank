@@ -148,7 +148,11 @@ export function encolar(sesion: Sesion): boolean {
 }
 
 /** Se llama al confirmar que ese entreno ya está en el servidor. `inicio` es la clave:
- *  es único por sesión y es lo mismo que el servidor guarda en `date`. */
+ *  es único por sesión y es lo mismo que el servidor guarda en `date`.
+ *
+ *  Descarta el resultado de `escribir()` porque si falla, el entreno se queda en la cola
+ *  y el siguiente reintento de subida, con la deduplicación de la tarea 4, lo encuentra
+ *  ya en el servidor y lo descarta. Se cura solo. */
 export function quitarDePendientes(inicio: string): void {
   escribir(
     PENDIENTES,
@@ -164,6 +168,9 @@ export function descansoPorDefecto(): number {
   return Number.isFinite(n) && n > 0 ? n : DESCANSO_INICIAL;
 }
 
+/** Descarta el resultado de `escribir()` porque es una preferencia: si falla la escritura,
+ *  la próxima serie propone el descanso inicial (`DESCANSO_INICIAL`) en vez del último
+ *  usado. Es molesto, pero no pierde ningún dato ni entreno. */
 export function guardarDescansoPorDefecto(segundos: number): void {
   escribir(DESCANSO, segundos);
 }
