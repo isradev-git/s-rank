@@ -67,9 +67,16 @@ export async function pedir<T>(
     Accept: "application/json",
   };
 
+  // El token va en toda escritura, tenga cuerpo o no. Atarlo a que haya cuerpo dejaba sin
+  // él a `salir()` —un POST sin cuerpo—, que Laravel rechazaba con 419: el navegador
+  // creía haber cerrado la sesión y en el servidor seguía abierta. Y ahora también a
+  // DELETE, que nunca lleva cuerpo.
+  if (metodo !== "GET") {
+    cabeceras["X-XSRF-TOKEN"] = await asegurarCsrf();
+  }
+
   if (cuerpo !== undefined) {
     cabeceras["Content-Type"] = "application/json";
-    cabeceras["X-XSRF-TOKEN"] = await asegurarCsrf();
   }
 
   let respuesta: Response;

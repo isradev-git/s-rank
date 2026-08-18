@@ -3,7 +3,7 @@
    todo esto —ningún código HTTP en pantalla— se rompe sin hacer ruido. */
 
 import { afterEach, expect, test, vi } from "vitest";
-import { ErrorApi, SESION_CADUCADA, pedir, sesionAbierta } from "./api";
+import { ErrorApi, SESION_CADUCADA, pedir, salir, sesionAbierta } from "./api";
 
 /** Sustituye a fetch por uno que devuelve lo que se le diga. */
 function servidorQueResponde(estado: number, cuerpo: unknown = {}) {
@@ -128,4 +128,35 @@ test("toda petición manda Accept: application/json", async () => {
 
   const [, opciones] = vi.mocked(fetch).mock.calls[0];
   expect((opciones?.headers as Record<string, string>).Accept).toBe("application/json");
+});
+
+test("una escritura sin cuerpo también manda el token CSRF", async () => {
+  // Salir es un POST sin cuerpo. Sin esta cabecera Laravel contesta 419 y la sesión se
+  // queda abierta en el servidor mientras el navegador cree haberla cerrado.
+  document.cookie = "XSRF-TOKEN=un-token";
+  const fetchFalso = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ message: "ok" }), { status: 200 }),
+  );
+  vi.stubGlobal("fetch", fetchFalso);
+
+  await salir();
+
+  const cabeceras = fetchFalso.mock.calls[0][1].headers as Record<string, string>;
+  expect(cabeceras["X-XSRF-TOKEN"]).toBe("un-token");
+});
+
+test("una lectura no arrastra el token ni el tipo de contenido", async () => {
+  // Un GET no modifica nada y no necesita token. Mandar Content-Type en un GET sin cuerpo
+  // además convierte la petición en una que algunos servidores rechazan.
+  document.cookie = "XSRF-TOKEN=un-token";
+  const fetchFalso = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ name: "Isra" }), { status: 200 }),
+  );
+  vi.stubGlobal("fetch", fetchFalso);
+
+  await pedir("/user");
+
+  const cabeceras = fetchFalso.mock.calls[0][1].headers as Record<string, string>;
+  expect(cabeceras["X-XSRF-TOKEN"]).toBeUndefined();
+  expect(cabeceras["Content-Type"]).toBeUndefined();
 });
