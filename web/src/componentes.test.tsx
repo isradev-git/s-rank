@@ -2,8 +2,8 @@
    que la sostiene: aparece por cuatro cosas y por ninguna más. Si saltara por cualquier
    otra, dejaría de significar algo. */
 
-import { render, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { expect, test, vi } from "vitest";
 import type { BloqueSistema } from "./api";
 import { Aviso, VentanaSistema } from "./componentes";
 
@@ -82,6 +82,43 @@ test("los ángulos de la ventana no se leen", () => {
   const leido = loQueSeLee(screen.getByRole("dialog"));
   expect(leido).not.toContain("┐");
   expect(leido).toContain("Nivel 5");
+});
+
+test("la ventana se lleva el foco al abrirse y lo devuelve al cerrarse", () => {
+  // Quien navega con teclado tiene que acabar dentro. Sin esto el foco se queda en el
+  // botón de detrás y hay que tabular a ciegas por media pantalla hasta dar con CERRAR,
+  // y el lector de pantalla no anuncia una ventana en la que el foco nunca entra.
+  const antes = document.createElement("button");
+  document.body.append(antes);
+  antes.focus();
+
+  const { unmount } = render(
+    <VentanaSistema sistema={sistema({ level_up: { from: 4, to: 5 } })} alCerrar={() => {}} />,
+  );
+
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "CERRAR" }));
+
+  unmount();
+  expect(document.activeElement).toBe(antes);
+
+  // `render`/`cleanup` no tocan lo que se añade a mano al body: si no se quita, el
+  // siguiente test de este fichero encuentra este botón colgado.
+  antes.remove();
+});
+
+test("Escape cierra la ventana y tabular no se sale de ella", () => {
+  const alCerrar = vi.fn();
+  render(
+    <VentanaSistema sistema={sistema({ level_up: { from: 4, to: 5 } })} alCerrar={alCerrar} />,
+  );
+  const ventana = screen.getByRole("dialog");
+
+  fireEvent.keyDown(ventana, { key: "Escape" });
+  expect(alCerrar).toHaveBeenCalledTimes(1);
+
+  // Una ventana que dice `aria-modal` no puede dejar que el tabulador se escape detrás.
+  const tab = fireEvent.keyDown(ventana, { key: "Tab" });
+  expect(tab).toBe(false); // `preventDefault` la canceló
 });
 
 test("el aviso se anuncia solo cuando es urgente", () => {

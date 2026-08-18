@@ -3,6 +3,7 @@
    Y la decoración —el `$`, los `[✓]`, las flechas— va marcada aria-hidden para que
    el lector de pantalla no la lea. Spec §5.1. */
 
+import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import type { BloqueSistema, Mision } from "./api";
 import { BLOQUES, bloquesEncendidos, textoRecord } from "./formato";
@@ -226,6 +227,23 @@ export function VentanaSistema({
   sistema: BloqueSistema;
   alCerrar: () => void;
 }) {
+  const ventana = useRef<HTMLDivElement>(null);
+
+  // Una ventana que se declara `aria-modal` tiene que cumplirlo. Sin esto, quien navega
+  // con teclado se queda con el foco detrás de ella y tiene que tabular a ciegas hasta
+  // tropezar con CERRAR, y quien usa lector de pantalla no oye que se haya abierto nada:
+  // la única recompensa de toda la aplicación pasaría muda.
+  //
+  // No se usa `<dialog>` con `showModal()`, que haría todo esto solo, porque jsdom no lo
+  // implementa y dejaría este comportamiento sin ningún test. Se revisa si algún día lo
+  // implementa: sería borrar este efecto entero.
+  useEffect(() => {
+    if (!ventana.current) return;
+    const anterior = document.activeElement as HTMLElement | null;
+    ventana.current.querySelector<HTMLElement>("button")?.focus();
+    return () => anterior?.focus();
+  }, []);
+
   const motivos = [
     sistema.level_up && `Nivel ${sistema.level_up.to}`,
     sistema.rank_up && `Rango ${sistema.rank_up.to}`,
@@ -236,7 +254,19 @@ export function VentanaSistema({
   if (motivos.length === 0) return null;
 
   return (
-    <div className="ventana-sistema" role="dialog" aria-modal="true" aria-label="El Sistema">
+    <div
+      ref={ventana}
+      className="ventana-sistema"
+      role="dialog"
+      aria-modal="true"
+      aria-label="El Sistema"
+      onKeyDown={(evento) => {
+        if (evento.key === "Escape") alCerrar();
+        // Dentro solo hay un botón, así que tabular solo puede sacar de una ventana que
+        // dice ser modal. El foco se queda aquí hasta que se cierre.
+        if (evento.key === "Tab") evento.preventDefault();
+      }}
+    >
       {/* Las esquinas en ángulo son dibujo de terminal, como los corchetes. */}
       <span className="angulo superior" aria-hidden="true" />
 
