@@ -313,8 +313,22 @@ test("si el envío falla, la sesión acaba en la cola y no se pierde", async () 
     new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
   );
 
-  expect(await entregar(SESION, 45, null)).toBe(null);
+  expect(await entregar(SESION, 45, null)).toBe("encolado");
   expect(pendientes().map((s) => s.inicio)).toEqual(["2026-08-18T17:00:00Z"]);
+});
+
+test("si además falla la escritura, entregar avisa de que NO está a salvo", async () => {
+  vi.mocked(guardarEntreno).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+  // El móvil no puede escribir: cuota llena o modo privado.
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("QuotaExceededError");
+  });
+
+  // `null` y no `"encolado"`: es la diferencia entre que la pantalla borre el borrador o
+  // lo deje donde está. Si las dos respuestas fueran la misma, aquí se perdería el entreno.
+  expect(await entregar(SESION, 45, null)).toBe(null);
 });
 
 test("si el envío sale bien, no se encola nada", async () => {
@@ -331,6 +345,23 @@ test("reintentar sube lo pendiente y lo saca de la cola", async () => {
 
   expect(await subirPendientes()).toEqual([SUBIDO]);
   expect(pendientes()).toEqual([]);
+});
+
+test("dos llamadas que se solapan no duplican el envío", async () => {
+  // Abrir la aplicación y recuperar la red pueden coincidir en el tiempo. Sin una guarda
+  // de reentrada, las dos llamadas leerían la misma cola antes de que ninguna la vaciara
+  // y subirían el mismo entreno dos veces: el duplicado que toda la deduplicación por
+  // fecha existe para evitar, pero por concurrencia y no por reintento.
+  encolar(SESION);
+  vi.mocked(entrenos).mockResolvedValue([]);
+  vi.mocked(guardarEntreno).mockResolvedValue(SUBIDO);
+
+  const [primera, segunda] = await Promise.all([subirPendientes(), subirPendientes()]);
+
+  expect(guardarEntreno).toHaveBeenCalledTimes(1);
+  expect(primera).toEqual([SUBIDO]);
+  // La segunda llegó mientras la primera ya estaba subiendo: no hace nada.
+  expect(segunda).toEqual([]);
 });
 
 test("un entreno que ya estaba subido se saca de la cola SIN volver a mandarlo", async () => {

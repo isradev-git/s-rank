@@ -272,21 +272,26 @@ export function yaSubido(inicio: string, subidos: { date: string }[]): boolean {
  *  sube el techo pasando `date_from` con la fecha del pendiente más antiguo. */
 const RECIENTES = 5;
 
-/** Sube el entreno o lo encola. Devuelve lo que respondió el servidor, o null si no hubo
- *  manera y quedó guardado en el móvil.
+/** Sube el entreno o lo encola. Tres respuestas, y las tres hay que mirarlas:
  *
- *  En los dos casos el dato está a salvo: subido, o en la cola. Por eso quien llama puede
- *  borrar el borrador después, y es la única transición que lo borra. */
+ *  - **el entreno del servidor:** subido y confirmado.
+ *  - **`"encolado"`:** no se pudo subir, pero está escrito en el móvil.
+ *  - **`null`:** ⚠️ **no está a salvo en ningún sitio.** Ni subió, ni se pudo escribir
+ *    —cuota llena, modo privado—.
+ *
+ *  Quien llama borra el borrador con las dos primeras y **no lo borra con `null`**: ese es
+ *  el único camino de toda la aplicación por el que se puede perder un entreno, y lo
+ *  cierra quien llama. Devolver `null` para «encolado» y para «no cabe» sería
+ *  indistinguible desde fuera, y la pantalla borraría en los dos casos. */
 export async function entregar(
   sesion: Sesion,
   duracionMinutos: number,
   notas: string | null,
-): Promise<EntrenoGuardado | null> {
+): Promise<EntrenoGuardado | "encolado" | null> {
   try {
     return await guardarEntreno(aPayload(sesion, duracionMinutos, notas));
   } catch {
-    encolar({ ...sesion, duracion: duracionMinutos, notas });
-    return null;
+    return encolar({ ...sesion, duracion: duracionMinutos, notas }) ? "encolado" : null;
   }
 }
 
@@ -297,6 +302,22 @@ export async function entregar(
  *  un servicio que haya que proteger de una estampida. Se reintenta al recuperar la
  *  conexión, al abrir la aplicación y con un botón. */
 export async function subirPendientes(): Promise<EntrenoGuardado[]> {
+  // Los dos disparadores del docstring pueden coincidir: se abre la aplicación justo
+  // cuando vuelve la red. Sin esta guarda las dos llamadas leerían la misma cola y
+  // subirían el mismo entreno dos veces, que es el duplicado que todo lo demás de esta
+  // función existe para evitar.
+  if (subiendo) return [];
+  subiendo = true;
+  try {
+    return await vaciarCola();
+  } finally {
+    subiendo = false;
+  }
+}
+
+let subiendo = false;
+
+async function vaciarCola(): Promise<EntrenoGuardado[]> {
   const cola = pendientes();
   if (cola.length === 0) return [];
 
