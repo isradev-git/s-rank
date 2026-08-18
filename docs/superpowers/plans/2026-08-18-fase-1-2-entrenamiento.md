@@ -2938,9 +2938,20 @@ Añadir dentro del componente:
   useEffect(() => {
     if (!nombreActual) return;
     setAnterior([]);
+
+    // `vigente` evita pintar el «anterior» de un ejercicio que ya no se está mirando: con
+    // la navegación de la tarea 11, cambiar de ejercicio con la red lenta haría llegar la
+    // respuesta del primero cuando ya se ve el segundo, y los kilos de referencia serían
+    // de otro ejercicio sin que nada lo delatara.
+    let vigente = true;
     ultimaSesion(nombreActual)
-      .then(setAnterior)
+      .then((series) => {
+        if (vigente) setAnterior(series);
+      })
       .catch(() => undefined);
+    return () => {
+      vigente = false;
+    };
   }, [nombreActual]);
 ```
 
