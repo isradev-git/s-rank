@@ -38,8 +38,8 @@ Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qu
 | Fase | Estado |
 |---|---|
 | 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
-| 1.1 · Esqueleto web: navegación, diseño, login, PWA | **en curso**, ya desplegada; falta probarla en el móvil |
-| 1.2 · Entrenamiento, con borrador sin conexión | pendiente |
+| 1.1 · Esqueleto web: navegación, diseño, login, PWA | **hecha**, en producción e instalada en el móvil |
+| 1.2 · Entrenamiento, con borrador sin conexión | **la siguiente** |
 | 1.3 · Nutrición, agua, suplementos, actividad | pendiente |
 | 1.4 · Progreso: historial, calendario, gráficas | pendiente |
 | 1.5 · Perfil, logros, administración | pendiente |

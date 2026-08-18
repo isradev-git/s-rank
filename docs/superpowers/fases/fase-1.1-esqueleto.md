@@ -163,7 +163,7 @@ código HTTP en pantalla. La traducción vive en un solo sitio, `api.ts`.
 - [x] Las pantallas tienen tests.
 - [x] Desplegada en `https://s-rank.israelzamora.es` y funcionando: se crea cuenta, se entra
       y se ven las misiones del día.
-- [ ] Instalada en el móvil desde el dominio real, y probada ahí.
+- [x] Instalada en el móvil desde el dominio real, y probada ahí.
 
 ## Lo que solo aparece fuera de los tests
 
@@ -193,15 +193,23 @@ servidor. Lo de esta lista es de la misma familia.
   `composer.json`, `artisan`, `phpunit.xml` y compañía dan 403.
 - **La fecha sale bien**: «miércoles, 12 de agosto», sin desfase de zona.
 
-**Pendiente, y solo se comprueba en el móvil:**
+**Verificado en el móvil el 18 de agosto:** se instala desde el dominio real y se usa sin
+problemas. Los navegadores solo ofrecen la instalación sobre HTTPS, así que contra el
+servidor de desarrollo no salía la opción; el manifiesto se sirve con
+`application/manifest+json`, que es el MIME que exige el instalador.
 
-- Que la aplicación se pueda instalar. Los navegadores solo lo ofrecen sobre HTTPS, así que
-  contra el servidor de desarrollo no salía la opción. El manifiesto ya se sirve con
-  `application/manifest+json`, que es el MIME que exige el instalador.
-- El lector de pantalla: que una misión hecha se oiga «Beber 2 litros de agua, hecha», que
-  el prompt no se lea, y que la barra de XP se oiga como un porcentaje.
-- Modo avión con la aplicación ya instalada: tiene que abrirse y explicarlo ella, no la
-  página de error del navegador.
+**Dos comprobaciones que se dan por buenas sin haberse hecho**, y conviene saber cuáles son
+antes de fiarse de ellas en la 1.2:
+
+- **El lector de pantalla.** Que una misión hecha se oiga «Beber 2 litros de agua, hecha»,
+  que el prompt no se lea y que la barra de XP se oiga como un porcentaje. Hay tests que
+  cubren lo que se puede cubrir sin voz —los corchetes fuera del nombre accesible del
+  botón, el `aria-hidden` de la decoración—, pero TalkBack en la mano no se pasó.
+- **Modo avión con la aplicación instalada.** Tiene que abrirse y explicarlo ella, no la
+  página de error del navegador. Es lo que arregló `cbee014` y lo que el trabajador de
+  servicio existe para conseguir; se probó en el escritorio, no en el móvil.
+
+Ninguna de las dos bloquea la 1.2. Son un minuto cada una el día que se quiera cerrar.
 
 ## Prompt para arrancar el chat
 
