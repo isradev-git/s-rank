@@ -772,9 +772,10 @@ real; una fila que se añadió y nunca se tocó no lo es."
 
 **Interfaces:**
 - Consume: `aPayload`, `encolar`, `pendientes`, `quitarDePendientes`; de `api.ts`
-  (tarea 6) `guardarEntreno` y `entrenos`, y los tipos `EntrenoGuardado` y `Resumen`.
+  (tarea 6) `guardarEntreno` y `entrenos`, y los tipos `EntrenoGuardado` y
+  `EntrenoDelHistorial`.
 - Produce: `yaSubido(inicio, subidos): boolean`,
-  `entregar(sesion, duracion, notas): Promise<EntrenoGuardado | null>`,
+  `entregar(sesion, duracion, notas): Promise<EntrenoGuardado | "encolado" | null>`,
   `subirPendientes(): Promise<EntrenoGuardado[]>`.
 
 > **Orden:** esta tarea depende de la 6 (`api.ts`). Quien ejecute el plan por agentes
@@ -812,8 +813,22 @@ test("si el envío falla, la sesión acaba en la cola y no se pierde", async () 
     new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
   );
 
-  expect(await entregar(SESION, 45, null)).toBe(null);
+  expect(await entregar(SESION, 45, null)).toBe("encolado");
   expect(pendientes().map((s) => s.inicio)).toEqual(["2026-08-18T17:00:00Z"]);
+});
+
+test("si además falla la escritura, entregar avisa de que NO está a salvo", async () => {
+  vi.mocked(guardarEntreno).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+  // El móvil no puede escribir: cuota llena o modo privado.
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("QuotaExceededError");
+  });
+
+  // `null` y no `"encolado"`: es la diferencia entre que la pantalla borre el borrador o
+  // lo deje donde está. Si las dos respuestas fueran la misma, aquí se perdería el entreno.
+  expect(await entregar(SESION, 45, null)).toBe(null);
 });
 
 test("si el envío sale bien, no se encola nada", async () => {
@@ -910,21 +925,26 @@ export function yaSubido(inicio: string, subidos: { date: string }[]): boolean {
  *  sube el techo pasando `date_from` con la fecha del pendiente más antiguo. */
 const RECIENTES = 5;
 
-/** Sube el entreno o lo encola. Devuelve lo que respondió el servidor, o null si no hubo
- *  manera y quedó guardado en el móvil.
+/** Sube el entreno o lo encola. Tres respuestas, y las tres hay que mirarlas:
  *
- *  En los dos casos el dato está a salvo: subido, o en la cola. Por eso quien llama puede
- *  borrar el borrador después, y es la única transición que lo borra. */
+ *  - **el entreno del servidor:** subido y confirmado.
+ *  - **`"encolado"`:** no se pudo subir, pero está escrito en el móvil.
+ *  - **`null`:** ⚠️ **no está a salvo en ningún sitio.** Ni subió, ni se pudo escribir
+ *    —cuota llena, modo privado—.
+ *
+ *  Quien llama borra el borrador con las dos primeras y **no lo borra con `null`**: ese es
+ *  el único camino de toda la aplicación por el que se puede perder un entreno, y lo
+ *  cierra quien llama. Devolver `null` para «encolado» y para «no cabe» sería
+ *  indistinguible desde fuera, y la pantalla borraría en los dos casos. */
 export async function entregar(
   sesion: Sesion,
   duracionMinutos: number,
   notas: string | null,
-): Promise<EntrenoGuardado | null> {
+): Promise<EntrenoGuardado | "encolado" | null> {
   try {
     return await guardarEntreno(aPayload(sesion, duracionMinutos, notas));
   } catch {
-    encolar(sesion);
-    return null;
+    return encolar(sesion) ? "encolado" : null;
   }
 }
 
@@ -935,6 +955,22 @@ export async function entregar(
  *  un servicio que haya que proteger de una estampida. Se reintenta al recuperar la
  *  conexión, al abrir la aplicación y con un botón. */
 export async function subirPendientes(): Promise<EntrenoGuardado[]> {
+  // Los dos disparadores del docstring pueden coincidir: se abre la aplicación justo
+  // cuando vuelve la red. Sin esta guarda las dos llamadas leerían la misma cola y
+  // subirían el mismo entreno dos veces, que es el duplicado que todo lo demás de esta
+  // función existe para evitar.
+  if (subiendo) return [];
+  subiendo = true;
+  try {
+    return await vaciarCola();
+  } finally {
+    subiendo = false;
+  }
+}
+
+let subiendo = false;
+
+async function vaciarCola(): Promise<EntrenoGuardado[]> {
   const cola = pendientes();
   if (cola.length === 0) return [];
 
@@ -1015,8 +1051,7 @@ Y en `entregar`, encolar con lo que se confirmó:
 
 ```ts
   } catch {
-    encolar({ ...sesion, duracion: duracionMinutos, notas });
-    return null;
+    return encolar({ ...sesion, duracion: duracionMinutos, notas }) ? "encolado" : null;
   }
 ```
 
@@ -3064,6 +3099,7 @@ Añadir al componente:
   const [minutos, setMinutos] = useState("");
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
 
   // La duración se propone al abrir el paso, no en cada repintado: si se recalculara sola
   // borraría lo que el usuario acabara de corregir.
@@ -3079,14 +3115,35 @@ Añadir al componente:
     const volumen = volumenTotal(sesion.exercises);
     const series = seriesHechas(sesion.exercises);
 
-    // `entregar` sube o encola: en los dos casos el dato queda a salvo, y por eso el
-    // borrador se puede borrar justo después. Es la única transición que lo borra.
-    const guardado = await entregar(sesion, duracion, notas);
+    const resultado = await entregar(sesion, duracion, notas);
+
+    // `null` significa que no subió Y tampoco se pudo escribir en el móvil. El entreno
+    // solo existe en esta pantalla: borrar el borrador aquí sería perderlo, que es lo
+    // único irrecuperable de toda la aplicación. Se deja donde está y se avisa.
+    if (resultado === null) {
+      setGuardando(false);
+      setFallo(
+        "No hemos podido guardar el entreno y tampoco cabe en el móvil. " +
+          "No cierres esta pantalla: libera espacio y vuelve a darle a guardar.",
+      );
+      return;
+    }
+
+    // Subido o encolado: en los dos casos el dato está a salvo fuera de esta pantalla, y
+    // esta es la única transición que borra el borrador.
     borrar();
 
     navegar("/entrenar/resumen", {
       replace: true,
-      state: { nombre: sesion.nombre, duracion, volumen, series, guardado },
+      state: {
+        nombre: sesion.nombre,
+        duracion,
+        volumen,
+        series,
+        // `"encolado"` no trae bloque `system`: el XP lo calcula el servidor cuando por
+        // fin reciba el entreno, y el resumen ya sabe pintar el caso sin él.
+        guardado: resultado === "encolado" ? null : resultado,
+      },
     });
   }
 ```
@@ -3119,6 +3176,8 @@ Y pintarlo en lugar de la tabla cuando `terminando` es cierto:
           onChange={(e) => setNotas(e.target.value)}
         />
 
+        {fallo && <Aviso tono="rojo">{fallo}</Aviso>}
+
         <Boton type="button" onClick={() => void guardarEntrenoEntero()} disabled={guardando}>
           {guardando ? "GUARDANDO…" : "GUARDAR"}
         </Boton>
@@ -3131,7 +3190,28 @@ Y pintarlo en lugar de la tabla cuando `terminando` es cierto:
 ```
 
 Ampliar los imports con `entregar`, `borrar` de `../borrador`, `duracionMinutos`,
-`volumenTotal` de `../formato` y `Campo` de `../componentes`.
+`volumenTotal` de `../formato` y `Campo`, `Aviso` de `../componentes`.
+
+⚠️ **Y añadir el test que cierra el único camino por el que se pierde un entreno.** Sin
+él nadie comprueba que la pantalla respeta el `null` de `entregar`:
+
+```tsx
+test("si no se puede ni subir ni guardar, el borrador NO se borra", async () => {
+  vi.mocked(entregar).mockResolvedValue(null);
+  pintarEnSesion();
+
+  fireEvent.click(screen.getByRole("button", { name: "TERMINAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  // Se avisa en español, sin número de error…
+  expect((await screen.findByRole("alert")).textContent).toContain("No cierres esta pantalla");
+  expect(document.body.textContent).not.toMatch(/\b[45]\d\d\b/);
+
+  // …y sobre todo: el entreno sigue en el móvil y no se ha ido a ninguna parte.
+  expect(leer()).not.toBe(null);
+  expect(navegar).not.toHaveBeenCalled();
+});
+```
 
 - [ ] **Paso 5 · Comprobar que pasa**
 
@@ -3150,8 +3230,14 @@ motivos concretos: la duración decide el XP —50 puntos a partir de 15
 minutos— y un borrador retomado al día siguiente daría una cifra imposible.
 Viene rellena con el tiempo transcurrido y se puede corregir.
 
-El borrador se borra después de entregar, en los dos casos: subido o
-encolado, el dato ya está a salvo. Es la única transición que lo borra.
+El borrador se borra después de entregar en dos de los tres casos: subido y
+encolado, que son los que dejan el dato a salvo fuera de esta pantalla. Es
+la única transición que lo borra.
+
+El tercero es el que importa. Si entregar devuelve null no subió y tampoco
+cupo en el móvil, así que el entreno solo existe en esta pantalla: se deja
+donde está, se avisa, y no se navega a ninguna parte. Es el único camino de
+toda la aplicación por el que se puede perder un entreno.
 
 Y el botón se bloquea mientras se guarda. Dos POST del mismo entreno con un
 segundo de diferencia crearían dos entrenos, y el deduplicado no puede
