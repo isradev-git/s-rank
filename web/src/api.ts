@@ -249,16 +249,26 @@ export async function sesionAbierta(): Promise<Usuario> {
 
 import type { EntrenoPayload, Modo } from "./borrador";
 
-/** Un récord recién batido, tal y como lo devuelve el servidor.
+/** Un récord recién batido, en el campo de primer nivel `new_records`.
  *
- *  ⚠️ El bloque `system` lleva sus récords con **esta misma forma**, no con la
- *  `{exercise, kind, value}` del ejemplo del spec §5.3: el listener le pasa al Sistema el
- *  mismo array que construye `WorkoutController::store`. */
+ *  ⚠️ **Dentro del bloque `system` el mismo récord llega con otra forma**, la de
+ *  `RecordDelSistema`: `SystemService::formatRecords()` lo traduce antes de meterlo ahí.
+ *  Este tipo se declara por completitud de la respuesta; **la interfaz lee siempre
+ *  `system.records`**, que es la que viene en toda respuesta con bloque `system`. */
 export type NuevoRecord = {
   name: string;
   weight_kg: number;
   previous_pr: number | null;
   is_first: boolean;
+};
+
+/** El mismo récord tal y como sale dentro del bloque `system`. `previous` a `null`
+ *  significa que era la primera marca: no hace falta un `is_first` aparte. */
+export type RecordDelSistema = {
+  exercise: string;
+  kind: string;
+  value: number;
+  previous: number | null;
 };
 
 export type Logro = { key: string; name: string; rarity: string };
@@ -268,7 +278,7 @@ export type BloqueSistema = {
   level_up: { from: number; to: number } | null;
   rank_up: { from: string; to: string } | null;
   achievements_unlocked: Logro[];
-  records: NuevoRecord[];
+  records: RecordDelSistema[];
   quests_completed: string[];
   progress: Progreso & {
     xp_total: number;
@@ -375,7 +385,13 @@ export function borrarPlantilla(id: string) {
 
 // ── Ejercicios ──────────────────────────────────────────────────────────────
 
-export type RecordPersonal = { name: string; max_weight: number; reps: number | null; date: string };
+export type RecordPersonal = {
+  name: string;
+  max_weight: number;
+  reps: number | null;
+  sets: number | null;
+  date: string;
+};
 
 export type SerieAnterior = {
   weight_kg: number | null;
