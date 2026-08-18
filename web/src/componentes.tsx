@@ -4,8 +4,8 @@
    el lector de pantalla no la lea. Spec §5.1. */
 
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import type { Mision } from "./api";
-import { BLOQUES, bloquesEncendidos } from "./formato";
+import type { BloqueSistema, Mision } from "./api";
+import { BLOQUES, bloquesEncendidos, textoRecord } from "./formato";
 
 // A diferencia del NumberFormat de Java, Intl.NumberFormat sí se puede compartir:
 // no guarda estado entre llamadas, y construirlo cada vez es caro.
@@ -150,12 +150,21 @@ export function Seccion({
 
 export function Boton({
   children,
+  compacto = false,
   ...resto
-}: { children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: {
+  children: ReactNode;
+  /** Para las barras de acciones, donde caben varios en una fila. */
+  compacto?: boolean;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   // Los corchetes van aria-hidden o el nombre accesible del botón pasa a ser
   // «corchete ENTRAR corchete». Son dibujo, como todo lo demás.
+  //
+  // El spread va detrás de className a propósito: una className que llegara por fuera
+  // machacaría la clase «boton» entera en vez de sumarse. Por eso la variante compacta
+  // es una propiedad y no una clase que alguien pase desde fuera.
   return (
-    <button className="boton" {...resto}>
+    <button className={compacto ? "boton compacto" : "boton"} {...resto}>
       <span aria-hidden="true">[ </span>
       {children}
       <span aria-hidden="true"> ]</span>
@@ -183,5 +192,66 @@ export function Campo({
         </span>
       )}
     </label>
+  );
+}
+
+/** Un aviso con dos urgencias.
+ *
+ *  `rojo` es una pérdida de datos en curso y va como `alert`: el lector de pantalla
+ *  interrumpe lo que esté diciendo. `ambar` es informativo y va como `status`, que espera
+ *  al turno. Usar `alert` para todo enseña a ignorarlo. */
+export function Aviso({
+  tono,
+  children,
+}: {
+  tono: "rojo" | "ambar";
+  children: ReactNode;
+}) {
+  return (
+    <p className={`aviso ${tono}`} role={tono === "rojo" ? "alert" : "status"}>
+      {children}
+    </p>
+  );
+}
+
+/** La ventana del Sistema. Spec §6.7: aparece sola y en exactamente cuatro momentos
+ *  —subir de nivel, subir de rango, desbloquear un logro y batir un récord—. Si saltara
+ *  por cualquier otra cosa dejaría de significar algo, y el cian dejaría de ser un premio.
+ *
+ *  Ganar XP a secas **no** la abre: pasa en todos los entrenos. */
+export function VentanaSistema({
+  sistema,
+  alCerrar,
+}: {
+  sistema: BloqueSistema;
+  alCerrar: () => void;
+}) {
+  const motivos = [
+    sistema.level_up && `Nivel ${sistema.level_up.to}`,
+    sistema.rank_up && `Rango ${sistema.rank_up.to}`,
+    ...sistema.achievements_unlocked.map((logro) => logro.name),
+    ...sistema.records.map(textoRecord),
+  ].filter((texto): texto is string => !!texto);
+
+  if (motivos.length === 0) return null;
+
+  return (
+    <div className="ventana-sistema" role="dialog" aria-modal="true" aria-label="El Sistema">
+      {/* Las esquinas en ángulo son dibujo de terminal, como los corchetes. */}
+      <span className="angulo superior" aria-hidden="true" />
+
+      <p className="titulo-ventana">EL SISTEMA</p>
+      <ul className="motivos">
+        {motivos.map((texto) => (
+          <li key={texto}>{texto}</li>
+        ))}
+      </ul>
+
+      <span className="angulo inferior" aria-hidden="true" />
+
+      <Boton type="button" onClick={alCerrar}>
+        CERRAR
+      </Boton>
+    </div>
   );
 }
