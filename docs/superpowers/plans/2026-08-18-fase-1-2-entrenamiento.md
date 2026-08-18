@@ -2461,11 +2461,18 @@ const EN_CURSO: TipoSesion = {
   ],
 };
 
+// Con `StrictMode`, igual que `main.tsx`. Aquí no es ceremonia: React invoca dos veces las
+// funciones actualizadoras y monta y desmonta los efectos una vez de más, que es lo que
+// caza un cronómetro sin limpiar o una escritura metida donde no toca. Esta pantalla la
+// siguen tocando las tareas 10, 11 y 14, y sin esto el test no se parecería a cómo se monta
+// la aplicación de verdad.
 const pintar = () =>
   render(
-    <MemoryRouter>
-      <Sesion />
-    </MemoryRouter>,
+    <StrictMode>
+      <MemoryRouter>
+        <Sesion />
+      </MemoryRouter>
+    </StrictMode>,
   );
 
 beforeEach(() => {
@@ -2591,13 +2598,18 @@ export default function Sesion() {
   if (!sesion) return null;
 
   /** El único camino por el que cambia el estado. Escribe primero y pinta después: si el
-   *  disco dice que no, el usuario se entera en la misma pulsación. */
+   *  disco dice que no, el usuario se entera en la misma pulsación y no un repintado más
+   *  tarde.
+   *
+   *  Se calcula fuera de `setSesion` y no dentro de una función actualizadora. React exige
+   *  que esas funciones sean puras y en desarrollo las invoca dos veces para cazar
+   *  justamente esto: escribir en disco y llamar a otro `setState` desde dentro. Aquí
+   *  `sesion` no puede ser nula —arriba hay un `return null`— y cada pulsación es su
+   *  propio evento, así que no hace falta la forma con función. */
   function actualizar(cambio: (anterior: TipoSesion) => TipoSesion) {
-    setSesion((anterior) => {
-      const siguiente = cambio(anterior!);
-      setSinSitio(!guardar(siguiente));
-      return siguiente;
-    });
+    const siguiente = cambio(sesion!);
+    setSinSitio(!guardar(siguiente));
+    setSesion(siguiente);
   }
 
   function cambiarSerie(indice: number, campo: keyof Serie, valor: number | string | null) {
@@ -2655,7 +2667,7 @@ export default function Sesion() {
 
       {sinSitio && (
         <Aviso tono="rojo">
-          Este navegador no está guardando el entreno. No cierres la aplicación hasta
+          Este navegador no está guardando el entreno: no cierres la aplicación hasta
           terminarlo y subirlo.
         </Aviso>
       )}
