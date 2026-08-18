@@ -2,21 +2,39 @@
    rompe, alguien pierde un entreno y ya no se acuerda de lo que levantó. */
 
 import { beforeEach, expect, test, vi } from "vitest";
+import { ErrorApi, entrenos, guardarEntreno, type EntrenoDelHistorial, type EntrenoGuardado } from "./api";
 import {
   ahoraUtc,
   aPayload,
   borrar,
   descansoPorDefecto,
   encolar,
+  entregar,
   guardar,
   guardarDescansoPorDefecto,
   leer,
   pendientes,
   quitarDePendientes,
   serieVacia,
+  subirPendientes,
+  yaSubido,
   type Sesion,
   type Serie,
 } from "./borrador";
+
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
+  entrenos: vi.fn(),
+  guardarEntreno: vi.fn(),
+}));
+
+/** Lo que devuelve `POST /api/workouts`, recortado a lo que se usa aquí. */
+const SUBIDO = {
+  id: "9f1c2a3e-0000-4000-8000-000000000001",
+  date: "2026-08-18T17:00:00.000000Z",
+  new_records: [],
+  system: { xp_gained: 80 },
+} as unknown as EntrenoGuardado;
 
 const SESION: Sesion = {
   v: 1,
@@ -37,6 +55,11 @@ const SESION: Sesion = {
 
 beforeEach(() => {
   localStorage.clear();
+  // `restoreMocks` de vite.config.ts solo alcanza a los espías de `vi.spyOn`: los `vi.fn()`
+  // que crea `vi.mock()` arrastran sus llamadas de un test a otro si no se limpian aquí, y
+  // `toHaveBeenCalled()` de un test contaría también las llamadas de los anteriores.
+  vi.mocked(guardarEntreno).mockReset();
+  vi.mocked(entrenos).mockReset();
 });
 
 test("lo que se guarda es exactamente lo que se lee", () => {
@@ -262,4 +285,89 @@ test("las notas vacías van como null, no como cadena vacía", () => {
   expect(aPayload(SESION, 45, "").notes).toBe(null);
   expect(aPayload(SESION, 45, "  ").notes).toBe(null);
   expect(aPayload(SESION, 45, "Buen día").notes).toBe("Buen día");
+});
+
+test("el deduplicado compara instantes, no cadenas", () => {
+  // Laravel serializa `2026-08-18T17:00:00.000000Z`; nosotros mandamos
+  // `2026-08-18T17:00:00Z`. Son el mismo momento escrito de dos maneras, y compararlos
+  // como texto haría que el reintento no reconociera nunca su propio entreno y lo
+  // duplicara en cada vuelta.
+  expect(yaSubido("2026-08-18T17:00:00Z", [{ date: "2026-08-18T17:00:00.000000Z" }])).toBe(true);
+});
+
+test("el deduplicado no confunde dos entrenos distintos del mismo día", () => {
+  expect(
+    yaSubido("2026-08-18T17:00:00Z", [
+      { date: "2026-08-18T19:30:00.000000Z" },
+      { date: "2026-08-17T17:00:00.000000Z" },
+    ]),
+  ).toBe(false);
+});
+
+test("con la lista vacía no está subido", () => {
+  expect(yaSubido("2026-08-18T17:00:00Z", [])).toBe(false);
+});
+
+test("si el envío falla, la sesión acaba en la cola y no se pierde", async () => {
+  vi.mocked(guardarEntreno).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+
+  expect(await entregar(SESION, 45, null)).toBe(null);
+  expect(pendientes().map((s) => s.inicio)).toEqual(["2026-08-18T17:00:00Z"]);
+});
+
+test("si el envío sale bien, no se encola nada", async () => {
+  vi.mocked(guardarEntreno).mockResolvedValue(SUBIDO);
+
+  expect(await entregar(SESION, 45, null)).toEqual(SUBIDO);
+  expect(pendientes()).toEqual([]);
+});
+
+test("reintentar sube lo pendiente y lo saca de la cola", async () => {
+  encolar(SESION);
+  vi.mocked(entrenos).mockResolvedValue([]);
+  vi.mocked(guardarEntreno).mockResolvedValue(SUBIDO);
+
+  expect(await subirPendientes()).toEqual([SUBIDO]);
+  expect(pendientes()).toEqual([]);
+});
+
+test("un entreno que ya estaba subido se saca de la cola SIN volver a mandarlo", async () => {
+  // El caso real: el POST se cometió en el servidor y se perdió la respuesta. Reintentar
+  // a ciegas duplicaría el entreno y quemaría uno de los dos huecos con XP del día.
+  encolar(SESION);
+  vi.mocked(entrenos).mockResolvedValue([
+    { date: "2026-08-18T17:00:00.000000Z" } as unknown as EntrenoDelHistorial,
+  ]);
+
+  expect(await subirPendientes()).toEqual([]);
+  expect(pendientes()).toEqual([]);
+  expect(guardarEntreno).not.toHaveBeenCalled();
+});
+
+test("si al reintentar sigue sin haber red, la cola se queda como estaba", async () => {
+  encolar(SESION);
+  vi.mocked(entrenos).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+
+  expect(await subirPendientes()).toEqual([]);
+  // Lo que no se ha podido subir sigue ahí. Vaciar la cola porque la comprobación falló
+  // sería tirar el entreno por no poder preguntar si ya estaba.
+  expect(pendientes()).toHaveLength(1);
+});
+
+test("una respuesta con forma inesperada no revienta el reintento ni vacía la cola", async () => {
+  // Si `entrenos()` alguna vez no devolviera un array —una respuesta rara del servidor—,
+  // tratarlo como el mismo entreno no podría comprobar nada. La alternativa segura es
+  // tratarlo como un fallo de red: no se sabe si ya estaba subido, así que no se manda ni
+  // se vacía la cola. Sin la comprobación, `.some` revienta sobre `undefined` y ese error
+  // sin capturar se escapa de `subirPendientes`.
+  encolar(SESION);
+  vi.mocked(entrenos).mockResolvedValue(undefined as unknown as EntrenoDelHistorial[]);
+
+  await expect(subirPendientes()).resolves.toEqual([]);
+  expect(pendientes()).toHaveLength(1);
+  expect(guardarEntreno).not.toHaveBeenCalled();
 });

@@ -12,6 +12,8 @@
    ponytail: el techo son 5 MB por origen contra ~2 KB por sesión. Si algún día se
    guardara algo grande —fotos, historial local entero—, entonces sí IndexedDB. */
 
+import { entrenos, guardarEntreno, type EntrenoGuardado } from "./api";
+
 export type Modo = "gym" | "home" | "calisthenics" | "swimming";
 
 export type Serie = {
@@ -47,6 +49,12 @@ export type Sesion = {
   exercises: Ejercicio[];
   /** Qué ejercicio se está viendo. */
   actual: number;
+  /** Los minutos que el usuario confirmó al terminar. Solo lo tienen las sesiones que ya
+   *  están en la cola: al reintentar no se puede recalcular, porque el reloj ha seguido
+   *  corriendo y la duración es lo que decide el XP. */
+  duracion?: number;
+  /** Las notas que escribió al terminar, por el mismo motivo. */
+  notas?: string | null;
 };
 
 export const VERSION = 1;
@@ -244,4 +252,87 @@ export function aPayload(
     notes: notas?.trim() || null,
     exercises,
   };
+}
+
+/** ¿Está ya en el servidor?
+ *
+ *  Compara instantes con `Date.parse` y no cadenas: nosotros mandamos
+ *  `2026-08-18T17:00:00Z` y Laravel devuelve `2026-08-18T17:00:00.000000Z`. Es el mismo
+ *  momento escrito de dos maneras, y compararlo como texto haría que el reintento no
+ *  reconociera nunca su propio entreno. */
+export function yaSubido(inicio: string, subidos: { date: string }[]): boolean {
+  const instante = Date.parse(inicio);
+  return subidos.some((entreno) => Date.parse(entreno.date) === instante);
+}
+
+/** Cuántos entrenos recientes se miran para deduplicar.
+ *
+ *  ponytail: cinco cubren el caso real —un pendiente es de hace minutos u horas—. Si
+ *  alguien encolara seis sin cobertura y el sexto ya estuviera subido, se duplicaría. Se
+ *  sube el techo pasando `date_from` con la fecha del pendiente más antiguo. */
+const RECIENTES = 5;
+
+/** Sube el entreno o lo encola. Devuelve lo que respondió el servidor, o null si no hubo
+ *  manera y quedó guardado en el móvil.
+ *
+ *  En los dos casos el dato está a salvo: subido, o en la cola. Por eso quien llama puede
+ *  borrar el borrador después, y es la única transición que lo borra. */
+export async function entregar(
+  sesion: Sesion,
+  duracionMinutos: number,
+  notas: string | null,
+): Promise<EntrenoGuardado | null> {
+  try {
+    return await guardarEntreno(aPayload(sesion, duracionMinutos, notas));
+  } catch {
+    encolar({ ...sesion, duracion: duracionMinutos, notas });
+    return null;
+  }
+}
+
+/** Vacía la cola. Devuelve lo que se subió, para que quien llame pueda enseñar la ventana
+ *  del Sistema de un entreno que subió solo.
+ *
+ *  Sin retroceso exponencial: al otro lado hay un hosting compartido con un usuario, no
+ *  un servicio que haya que proteger de una estampida. Se reintenta al recuperar la
+ *  conexión, al abrir la aplicación y con un botón. */
+export async function subirPendientes(): Promise<EntrenoGuardado[]> {
+  const cola = pendientes();
+  if (cola.length === 0) return [];
+
+  let recientes: { date: string }[];
+  try {
+    recientes = await entrenos({ per_page: RECIENTES });
+    // Una respuesta que no es un array no dice nada fiable sobre lo que ya está subido.
+    // Tratarla como fallo evita una excepción sin capturar en el `.some` de `yaSubido` y,
+    // sobre todo, evita vaciar la cola sin haber podido comprobar nada.
+    if (!Array.isArray(recientes)) throw new Error("respuesta inesperada de /workouts");
+  } catch {
+    // Sin red no se puede ni preguntar. La cola se queda tal cual: vaciarla porque la
+    // comprobación falló sería tirar el entreno por no poder preguntar si ya estaba.
+    return [];
+  }
+
+  const subidos: EntrenoGuardado[] = [];
+
+  for (const sesion of cola) {
+    if (yaSubido(sesion.inicio, recientes)) {
+      // Se cometió y se perdió la respuesta. Ya está donde tiene que estar.
+      quitarDePendientes(sesion.inicio);
+      continue;
+    }
+    try {
+      // La duración y las notas son las que se confirmaron al terminar, no una
+      // recalculada ahora: el reloj ha seguido corriendo y la duración decide el XP.
+      subidos.push(
+        await guardarEntreno(aPayload(sesion, sesion.duracion ?? 0, sesion.notas ?? null)),
+      );
+      quitarDePendientes(sesion.inicio);
+    } catch {
+      // Sigue sin haber manera. Se queda en la cola y se prueba en el próximo intento.
+      break;
+    }
+  }
+
+  return subidos;
 }
