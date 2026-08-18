@@ -9,7 +9,7 @@ construir, qué endpoints se consumen y cuándo se puede dar por terminada.
 | Fase | Contenido | Estado |
 |---|---|---|
 | [1.0](fase-1.0-backend.md) | Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha** — en producción |
-| [1.1](fase-1.1-esqueleto.md) | Esqueleto web: navegación, diseño, login, registro y PWA | **en curso** — construido y probado en local, sin desplegar |
+| [1.1](fase-1.1-esqueleto.md) | Esqueleto web: navegación, diseño, login, registro y PWA | **en curso** — desplegada y verificada en producción; falta probarla instalada en el móvil |
 | [1.2](fase-1.2-entrenamiento.md) | Entrenamiento, con borrador sin conexión | pendiente |
 | [1.3](fase-1.3-nutricion.md) | Nutrición, agua, suplementos, actividad, recetas | pendiente |
 | [1.4](fase-1.4-progreso.md) | Historial, calendario, gráficas, récords | pendiente |
