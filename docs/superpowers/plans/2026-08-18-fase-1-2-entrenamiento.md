@@ -1800,7 +1800,9 @@ test("un logro la abre con su nombre, no con su clave", () => {
 test("un récord la abre con su marca anterior", () => {
   render(
     <VentanaSistema
-      sistema={sistema({ records: [{ name: "Press banca", weight_kg: 85, previous_pr: 80, is_first: false }] })}
+      sistema={sistema({
+        records: [{ exercise: "Press banca", kind: "weight", value: 85, previous: 80 }],
+      })}
       alCerrar={() => {}}
     />,
   );
@@ -1815,6 +1817,39 @@ test("los ángulos de la ventana no se leen", () => {
   const leido = loQueSeLee(screen.getByRole("dialog"));
   expect(leido).not.toContain("┐");
   expect(leido).toContain("Nivel 5");
+});
+
+test("la ventana se lleva el foco al abrirse y lo devuelve al cerrarse", () => {
+  // Quien navega con teclado tiene que acabar dentro. Sin esto el foco se queda en el
+  // botón de detrás y hay que tabular a ciegas por media pantalla hasta dar con CERRAR,
+  // y el lector de pantalla no anuncia una ventana en la que el foco nunca entra.
+  const antes = document.createElement("button");
+  document.body.append(antes);
+  antes.focus();
+
+  const { unmount } = render(
+    <VentanaSistema sistema={sistema({ level_up: { from: 4, to: 5 } })} alCerrar={() => {}} />,
+  );
+
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "CERRAR" }));
+
+  unmount();
+  expect(document.activeElement).toBe(antes);
+});
+
+test("Escape cierra la ventana y tabular no se sale de ella", () => {
+  const alCerrar = vi.fn();
+  render(
+    <VentanaSistema sistema={sistema({ level_up: { from: 4, to: 5 } })} alCerrar={alCerrar} />,
+  );
+  const ventana = screen.getByRole("dialog");
+
+  fireEvent.keyDown(ventana, { key: "Escape" });
+  expect(alCerrar).toHaveBeenCalledTimes(1);
+
+  // Una ventana que dice `aria-modal` no puede dejar que el tabulador se escape detrás.
+  const tab = fireEvent.keyDown(ventana, { key: "Tab" });
+  expect(tab).toBe(false); // `preventDefault` la canceló
 });
 
 test("el aviso se anuncia solo cuando es urgente", () => {
@@ -1870,6 +1905,23 @@ export function VentanaSistema({
   sistema: BloqueSistema;
   alCerrar: () => void;
 }) {
+  const ventana = useRef<HTMLDivElement>(null);
+
+  // Una ventana que se declara `aria-modal` tiene que cumplirlo. Sin esto, quien navega
+  // con teclado se queda con el foco detrás de ella y tiene que tabular a ciegas hasta
+  // tropezar con CERRAR, y quien usa lector de pantalla no oye que se haya abierto nada:
+  // la única recompensa de toda la aplicación pasaría muda.
+  //
+  // No se usa `<dialog>` con `showModal()`, que haría todo esto solo, porque jsdom no lo
+  // implementa y dejaría este comportamiento sin ningún test. Se revisa si algún día lo
+  // implementa: sería borrar este efecto entero.
+  useEffect(() => {
+    if (!ventana.current) return;
+    const anterior = document.activeElement as HTMLElement | null;
+    ventana.current.querySelector<HTMLElement>("button")?.focus();
+    return () => anterior?.focus();
+  }, []);
+
   const motivos = [
     sistema.level_up && `Nivel ${sistema.level_up.to}`,
     sistema.rank_up && `Rango ${sistema.rank_up.to}`,
@@ -1880,7 +1932,19 @@ export function VentanaSistema({
   if (motivos.length === 0) return null;
 
   return (
-    <div className="ventana-sistema" role="dialog" aria-modal="true" aria-label="El Sistema">
+    <div
+      ref={ventana}
+      className="ventana-sistema"
+      role="dialog"
+      aria-modal="true"
+      aria-label="El Sistema"
+      onKeyDown={(evento) => {
+        if (evento.key === "Escape") alCerrar();
+        // Dentro solo hay un botón, así que tabular solo puede sacar de una ventana que
+        // dice ser modal. El foco se queda aquí hasta que se cierre.
+        if (evento.key === "Tab") evento.preventDefault();
+      }}
+    >
       {/* Las esquinas en ángulo son dibujo de terminal, como los corchetes. */}
       <span className="angulo superior" aria-hidden="true" />
 
