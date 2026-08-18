@@ -189,6 +189,18 @@ nuevo, súbelo al lado y cámbialo de sitio al final, que por FTP es instantáne
 4. Si algo falla, los dos renombrados al revés devuelven la versión anterior en segundos.
 5. Cuando la aplicación va, borra `vendor.viejo`.
 
+⚠️ **Durante el cambio, alguna petición puede contestar 500 y no es un fallo de la
+aplicación.** Pasó el 18 de agosto: `hoy` dijo «No hemos podido conectar» una vez, con
+`/up` y el login respondiendo bien, y a los minutos funcionaba todo sin tocar nada. El
+autoload de Composer resuelve clase a clase, así que una ruta a medio camino encuentra
+ficheros que aún no están o que ya son de la otra versión; y opcache tarda unos segundos
+en darse cuenta de que el contenido cambió. Las rutas que cargan pocas clases —`/up`, el
+login— siguen contestando, y las que cargan muchas —`hoy`, que arrastra `QuestService`,
+`SystemService`, `AchievementService` y los modelos— son las que caen.
+
+**Antes de buscar un fallo después de un despliegue, espera un minuto y vuelve a probar.**
+Si sigue, entonces sí: `storage/logs/laravel.log`.
+
 ## Copias de seguridad de producción
 
 **La base de datos `srank` de Ginernet no tiene copia automática de nada.** Es el único
