@@ -174,3 +174,74 @@ export function descansoPorDefecto(): number {
 export function guardarDescansoPorDefecto(segundos: number): void {
   escribir(DESCANSO, segundos);
 }
+
+/** Lo que la API acepta en cada serie. Los campos que no van, no van: mandar `null`
+ *  explícitos ensucia el cuerpo sin aportar nada, porque la validación de Laravel los
+ *  tiene todos como `nullable`. */
+export type SeriePayload = {
+  weight_kg?: number;
+  reps?: number;
+  rpe?: number;
+  distance_m?: number;
+  time_seconds?: number;
+  style?: string;
+  rest_seconds?: number;
+};
+
+export type EntrenoPayload = {
+  mode: Modo;
+  date: string;
+  duration_minutes: number;
+  notes: string | null;
+  exercises: { name: string; sets: SeriePayload[] }[];
+};
+
+/** Los campos que viajan en cada modo. En fuerza no se manda distancia; en natación no se
+ *  manda peso. Son dos disposiciones distintas y mezclarlas guardaría filas sin sentido. */
+const CAMPOS = {
+  fuerza: ["weight_kg", "reps", "rpe", "rest_seconds"],
+  natacion: ["distance_m", "time_seconds", "style", "rest_seconds"],
+} as const;
+
+/** Vacía = sin ningún dato **de su disposición**.
+ *
+ *  Una serie con repeticiones y sin peso —dominadas a peso corporal— no está vacía y se
+ *  manda: es un entreno real. Una fila que se añadió y nunca se tocó, sí. */
+export function serieVacia(serie: Serie, modo: Modo): boolean {
+  return modo === "swimming"
+    ? serie.distance_m == null && serie.time_seconds == null
+    : serie.weight_kg == null && serie.reps == null;
+}
+
+export function aPayload(
+  sesion: Sesion,
+  duracionMinutos: number,
+  notas: string | null,
+): EntrenoPayload {
+  const campos = sesion.mode === "swimming" ? CAMPOS.natacion : CAMPOS.fuerza;
+
+  const exercises = sesion.exercises
+    .map((ejercicio) => ({
+      name: ejercicio.name,
+      sets: ejercicio.sets
+        .filter((s) => !serieVacia(s, sesion.mode))
+        .map((s) => {
+          const salida: Record<string, number | string> = {};
+          for (const campo of campos) {
+            const valor = s[campo];
+            if (valor != null) salida[campo] = valor;
+          }
+          return salida as SeriePayload;
+        }),
+    }))
+    .filter((ejercicio) => ejercicio.sets.length > 0);
+
+  return {
+    mode: sesion.mode,
+    date: sesion.inicio,
+    duration_minutes: duracionMinutos,
+    // Una cadena vacía en `notes` guardaría una nota que no existe.
+    notes: notas?.trim() || null,
+    exercises,
+  };
+}

@@ -4,6 +4,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import {
   ahoraUtc,
+  aPayload,
   borrar,
   descansoPorDefecto,
   encolar,
@@ -12,7 +13,9 @@ import {
   leer,
   pendientes,
   quitarDePendientes,
+  serieVacia,
   type Sesion,
+  type Serie,
 } from "./borrador";
 
 const SESION: Sesion = {
@@ -145,4 +148,118 @@ test("un descanso guardado sin sentido no se cree", () => {
     localStorage.setItem("srank.descanso-defecto", basura);
     expect(descansoPorDefecto(), `«${basura}» dio otra cosa`).toBe(90);
   }
+});
+
+/** Una serie de fuerza rellena a medias, para no repetir los ocho campos cada vez. */
+function serie(campos: Partial<Serie> = {}): Serie {
+  return {
+    weight_kg: null, reps: null, rpe: null,
+    distance_m: null, time_seconds: null, style: null,
+    rest_seconds: null, hecha: false,
+    ...campos,
+  };
+}
+
+test("el cuerpo lleva una fila por serie, como pide la API", () => {
+  const sesion: Sesion = {
+    ...SESION,
+    exercises: [
+      {
+        name: "Press banca",
+        objetivo: null,
+        sets: [
+          serie({ weight_kg: 80, reps: 5, rpe: 8, rest_seconds: 180, hecha: true }),
+          serie({ weight_kg: 80, reps: 5, hecha: true }),
+        ],
+      },
+    ],
+  };
+
+  expect(aPayload(sesion, 45, null)).toEqual({
+    mode: "gym",
+    date: "2026-08-18T17:00:00Z",
+    duration_minutes: 45,
+    notes: null,
+    exercises: [
+      {
+        name: "Press banca",
+        sets: [
+          { weight_kg: 80, reps: 5, rpe: 8, rest_seconds: 180 },
+          { weight_kg: 80, reps: 5 },
+        ],
+      },
+    ],
+  });
+});
+
+test("`hecha` no se manda: es del cliente y el servidor no tiene ese campo", () => {
+  const sesion: Sesion = {
+    ...SESION,
+    exercises: [{ name: "Sentadilla", objetivo: null, sets: [serie({ weight_kg: 100, reps: 3, hecha: true })] }],
+  };
+
+  expect(JSON.stringify(aPayload(sesion, 30, null))).not.toContain("hecha");
+});
+
+test("las series vacías no se mandan, pero las de peso corporal sí", () => {
+  const sesion: Sesion = {
+    ...SESION,
+    exercises: [
+      {
+        name: "Dominadas",
+        objetivo: null,
+        sets: [
+          serie({ reps: 10 }),          // peso corporal: sin kilos pero con reps. Vale.
+          serie({ weight_kg: 20 }),     // lastre apuntado y reps por rellenar. Vale.
+          serie(),                      // fila que se añadió y nunca se tocó. Fuera.
+        ],
+      },
+    ],
+  };
+
+  expect(aPayload(sesion, 30, null).exercises[0].sets).toEqual([{ reps: 10 }, { weight_kg: 20 }]);
+});
+
+test("un ejercicio que se queda sin series no se manda", () => {
+  const sesion: Sesion = {
+    ...SESION,
+    exercises: [
+      { name: "Press banca", objetivo: null, sets: [serie({ weight_kg: 80, reps: 5 })] },
+      { name: "Se me olvidó hacerlo", objetivo: null, sets: [serie(), serie()] },
+    ],
+  };
+
+  expect(aPayload(sesion, 30, null).exercises.map((e) => e.name)).toEqual(["Press banca"]);
+});
+
+test("natación manda sus campos y ninguno de fuerza", () => {
+  const sesion: Sesion = {
+    ...SESION,
+    mode: "swimming",
+    exercises: [
+      {
+        name: "Crol",
+        objetivo: null,
+        sets: [serie({ distance_m: 100, time_seconds: 95, style: "Crol", rest_seconds: 30 })],
+      },
+    ],
+  };
+
+  expect(aPayload(sesion, 40, null).exercises[0].sets).toEqual([
+    { distance_m: 100, time_seconds: 95, style: "Crol", rest_seconds: 30 },
+  ]);
+});
+
+test("una serie de natación está vacía si no tiene ni distancia ni tiempo", () => {
+  expect(serieVacia(serie(), "swimming")).toBe(true);
+  expect(serieVacia(serie({ distance_m: 50 }), "swimming")).toBe(false);
+  expect(serieVacia(serie({ time_seconds: 60 }), "swimming")).toBe(false);
+  // Y el peso no la salva: en natación no se manda y quedaría una fila sin nada dentro.
+  expect(serieVacia(serie({ weight_kg: 80 }), "swimming")).toBe(true);
+});
+
+test("las notas vacías van como null, no como cadena vacía", () => {
+  expect(aPayload(SESION, 45, "").notes).toBe(null);
+  expect(aPayload(SESION, 45, "  ").notes).toBe(null);
+  expect(aPayload(SESION, 45, "Buen día").notes).toBe("Buen día");
 });
