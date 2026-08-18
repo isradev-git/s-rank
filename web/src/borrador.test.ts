@@ -2,7 +2,18 @@
    rompe, alguien pierde un entreno y ya no se acuerda de lo que levantó. */
 
 import { beforeEach, expect, test, vi } from "vitest";
-import { ahoraUtc, borrar, guardar, leer, type Sesion } from "./borrador";
+import {
+  ahoraUtc,
+  borrar,
+  descansoPorDefecto,
+  encolar,
+  guardar,
+  guardarDescansoPorDefecto,
+  leer,
+  pendientes,
+  quitarDePendientes,
+  type Sesion,
+} from "./borrador";
 
 const SESION: Sesion = {
   v: 1,
@@ -71,4 +82,67 @@ test("la marca de tiempo va en UTC y sin milisegundos", () => {
   // valor que devuelve el servidor no coincide nunca con el local y el deduplicado de la
   // tarea 4 no encuentra jamás su propio entreno.
   expect(ahoraUtc()).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+});
+
+test("la cola guarda más de un entreno y respeta el orden", () => {
+  // Se puede terminar un entreno sin cobertura y empezar otro antes de recuperarla.
+  // Por eso la cola es un array y no un solo registro.
+  const segunda: Sesion = { ...SESION, inicio: "2026-08-18T19:30:00Z", nombre: "Piernas" };
+
+  expect(encolar(SESION)).toBe(true);
+  expect(encolar(segunda)).toBe(true);
+
+  expect(pendientes().map((s) => s.inicio)).toEqual([
+    "2026-08-18T17:00:00Z",
+    "2026-08-18T19:30:00Z",
+  ]);
+});
+
+test("quitar de la cola quita solo el que se sube, no la cola entera", () => {
+  const segunda: Sesion = { ...SESION, inicio: "2026-08-18T19:30:00Z" };
+  encolar(SESION);
+  encolar(segunda);
+
+  quitarDePendientes("2026-08-18T17:00:00Z");
+
+  expect(pendientes().map((s) => s.inicio)).toEqual(["2026-08-18T19:30:00Z"]);
+});
+
+test("una cola con basura dentro devuelve lo que sí se entiende", () => {
+  // Si un despliegue cambiara la forma, perder los buenos por culpa de uno malo sería
+  // exactamente el fallo que este fichero existe para evitar.
+  localStorage.setItem(
+    "srank.entrenos-pendientes",
+    JSON.stringify([{ v: 99, roto: true }, SESION]),
+  );
+
+  expect(pendientes()).toEqual([SESION]);
+});
+
+test("la cola es un sitio distinto del borrador", () => {
+  // Mezclarlos obligaría a distinguirlos con una bandera dentro del mismo registro, que
+  // es la forma habitual de subir un entreno a medias por error.
+  guardar(SESION);
+  encolar(SESION);
+
+  borrar();
+
+  expect(leer()).toBe(null);
+  expect(pendientes()).toHaveLength(1);
+});
+
+test("el descanso por defecto tiene un valor razonable la primera vez", () => {
+  expect(descansoPorDefecto()).toBe(90);
+});
+
+test("el descanso por defecto se recuerda entre sesiones", () => {
+  guardarDescansoPorDefecto(180);
+  expect(descansoPorDefecto()).toBe(180);
+});
+
+test("un descanso guardado sin sentido no se cree", () => {
+  for (const basura of ["", "hola", "-30", "0"]) {
+    localStorage.setItem("srank.descanso-defecto", basura);
+    expect(descansoPorDefecto(), `«${basura}» dio otra cosa`).toBe(90);
+  }
 });

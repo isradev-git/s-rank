@@ -119,3 +119,51 @@ export function borrar(): void {
     // pero no pierde nada, que es el orden de prioridades de este fichero.
   }
 }
+
+const PENDIENTES = "srank.entrenos-pendientes";
+const DESCANSO = "srank.descanso-defecto";
+
+/** 90 segundos. Es lo que dura un descanso normal entre series de fuerza, y es lo que se
+ *  usa mientras el usuario no diga otra cosa. */
+const DESCANSO_INICIAL = 90;
+
+/** Los entrenos terminados que todavía no se han subido.
+ *
+ *  Es un array y no un solo registro porque se puede terminar un entreno sin cobertura y
+ *  empezar otro antes de recuperarla. Lo que no se entiende se descarta uno a uno: perder
+ *  los buenos por culpa de uno malo sería el fallo que este fichero evita. */
+export function pendientes(): Sesion[] {
+  const texto = crudo(PENDIENTES);
+  if (!texto) return [];
+  try {
+    const dato: unknown = JSON.parse(texto);
+    return Array.isArray(dato) ? dato.filter(esSesion) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function encolar(sesion: Sesion): boolean {
+  return escribir(PENDIENTES, [...pendientes(), sesion]);
+}
+
+/** Se llama al confirmar que ese entreno ya está en el servidor. `inicio` es la clave:
+ *  es único por sesión y es lo mismo que el servidor guarda en `date`. */
+export function quitarDePendientes(inicio: string): void {
+  escribir(
+    PENDIENTES,
+    pendientes().filter((s) => s.inicio !== inicio),
+  );
+}
+
+/** El descanso que se propone al añadir una serie. Las plantillas no lo traen: la columna
+ *  `template_exercises.rest_seconds` existe pero ni el POST ni el PUT de la API la
+ *  aceptan, así que siempre llega nula. Vive aquí, como en FitLoop. */
+export function descansoPorDefecto(): number {
+  const n = Number(crudo(DESCANSO));
+  return Number.isFinite(n) && n > 0 ? n : DESCANSO_INICIAL;
+}
+
+export function guardarDescansoPorDefecto(segundos: number): void {
+  escribir(DESCANSO, segundos);
+}
