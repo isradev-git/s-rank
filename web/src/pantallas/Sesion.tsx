@@ -39,13 +39,18 @@ export default function Sesion() {
   if (!sesion) return null;
 
   /** El único camino por el que cambia el estado. Escribe primero y pinta después: si el
-   *  disco dice que no, el usuario se entera en la misma pulsación. */
+   *  disco dice que no, el usuario se entera en la misma pulsación y no un repintado más
+   *  tarde.
+   *
+   *  Se calcula fuera de `setSesion` y no dentro de una función actualizadora. React exige
+   *  que esas funciones sean puras y en desarrollo las invoca dos veces para cazar
+   *  justamente esto: escribir en disco y llamar a otro `setState` desde dentro. Aquí
+   *  `sesion` no puede ser nula —arriba hay un `return null`— y cada pulsación es su
+   *  propio evento, así que no hace falta la forma con función. */
   function actualizar(cambio: (anterior: TipoSesion) => TipoSesion) {
-    setSesion((anterior) => {
-      const siguiente = cambio(anterior!);
-      setSinSitio(!guardar(siguiente));
-      return siguiente;
-    });
+    const siguiente = cambio(sesion!);
+    setSinSitio(!guardar(siguiente));
+    setSesion(siguiente);
   }
 
   function cambiarSerie(indice: number, campo: keyof Serie, valor: number | string | null) {

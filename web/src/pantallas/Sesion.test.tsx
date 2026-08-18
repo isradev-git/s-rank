@@ -5,6 +5,7 @@
    avión y que sobreviva a que el sistema mate el proceso. jsdom no tiene ni red que
    cortar ni proceso que matar. */
 
+import { StrictMode } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, expect, test, vi } from "vitest";
@@ -34,11 +35,18 @@ const EN_CURSO: TipoSesion = {
   ],
 };
 
+// Con `StrictMode`, igual que `main.tsx`. Aquí no es ceremonia: React invoca dos veces las
+// funciones actualizadoras y monta y desmonta los efectos una vez de más, que es lo que
+// caza un cronómetro sin limpiar o una escritura metida donde no toca. Esta pantalla la
+// siguen tocando las tareas 10, 11 y 14, y sin esto el test no se parecería a cómo se monta
+// la aplicación de verdad.
 const pintar = () =>
   render(
-    <MemoryRouter>
-      <Sesion />
-    </MemoryRouter>,
+    <StrictMode>
+      <MemoryRouter>
+        <Sesion />
+      </MemoryRouter>
+    </StrictMode>,
   );
 
 beforeEach(() => {
