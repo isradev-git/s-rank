@@ -6,6 +6,12 @@ que al terminar el Sistema te diga qué has ganado.
 Es el 40% de la aplicación y lo más complejo. También es lo único que funciona sin
 conexión.
 
+📐 **El diseño aprobado está en
+[2026-08-18-entrenamiento-design.md](../specs/2026-08-18-entrenamiento-design.md).** Manda
+él donde discrepe de este documento: el borrador va en `localStorage` y no en IndexedDB, y
+el historial de entrenos se mueve a la fase 1.4. El §7 del spec lista las cuatro
+desviaciones con su motivo.
+
 ## Qué existe cuando empieza
 
 De la **1.0**: la API completa, el Sistema calculando XP y récords en el servidor.
