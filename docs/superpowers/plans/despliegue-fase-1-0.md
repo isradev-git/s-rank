@@ -199,6 +199,20 @@ Tienen que salir las cuatro. Si Ginernet vuelve a inyectar su propia CSP, aparec
 veces la cabecera y el navegador aplica **la más restrictiva de las dos**: eso rompe la
 aplicación en silencio, y esta orden es la forma de verlo.
 
+## Verificado el 18 de agosto, contra el servidor
+
+- **Las cuatro cabeceras salen, y cada una una sola vez.** Ginernet no vuelve a inyectar su
+  CSP por detrás de la del `.htaccess`.
+- **La sesión dura 30 días de verdad:** `s-rank-session` viene con `Max-Age=2592000`,
+  `secure`, `httponly` y `samesite=lax`. Antes eran 7200 segundos, dos horas, y era el
+  valor por defecto de Laravel: nadie lo había puesto en el `.env`.
+- **`XSRF-TOKEN` sí es legible por JavaScript** —no lleva `httponly`— y tiene que seguir
+  así: `api.ts` la lee para mandar `X-XSRF-TOKEN` en cada escritura. La que guarda la
+  sesión es la otra, y esa no se lee desde el navegador.
+
+Las tres solo se ven aquí. La suite corre con `SESSION_DRIVER=array` y sin Apache en medio,
+así que ni la duración de la cookie ni las cabeceras pasan por ningún test.
+
 ## Recordatorio
 
 `old/database/database.sqlite` y `old/database/database.2026-05-backup.sqlite` son la
