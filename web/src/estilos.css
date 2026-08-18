@@ -512,3 +512,18 @@ body {
   outline: 2px solid var(--ambar);
   outline-offset: -2px;
 }
+
+/* ── Sesión ───────────────────────────────────────────────────────────────── */
+
+.nombre-ejercicio {
+  font-size: var(--titulo);
+  color: var(--texto);
+  margin-top: 1.25rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
