@@ -527,3 +527,15 @@ body {
   gap: 0.5rem;
   margin-top: 1.25rem;
 }
+
+.descanso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--azul);
+  color: var(--azul);
+  font-size: var(--seccion);
+}

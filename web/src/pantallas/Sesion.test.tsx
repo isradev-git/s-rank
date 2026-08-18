@@ -10,6 +10,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, expect, test, vi } from "vitest";
 import { guardar, leer, type Sesion as TipoSesion } from "../borrador";
+import { recordsPersonales } from "../api";
 import Sesion from "./Sesion";
 
 vi.mock("../api", async (importOriginal) => ({
@@ -118,4 +119,75 @@ test("el avance se dice con palabras, no solo con la barra", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Serie 1, pendiente" }));
 
   expect(screen.getByText("1 serie hecha")).toBeTruthy();
+});
+
+test("marcar una serie arranca la cuenta atrás del descanso", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Serie 1, pendiente" }));
+  expect(screen.getByText("Descanso 1:30")).toBeTruthy();
+
+  await vi.advanceTimersByTimeAsync(10_000);
+  expect(screen.getByText("Descanso 1:20")).toBeTruthy();
+
+  vi.useRealTimers();
+});
+
+test("el descanso se puede saltar", async () => {
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Serie 1, pendiente" }));
+  fireEvent.click(screen.getByRole("button", { name: "SALTAR DESCANSO" }));
+
+  expect(screen.queryByText(/^Descanso /)).toBe(null);
+});
+
+test("desmarcar una serie no arranca ningún descanso", async () => {
+  pintar();
+  const marca = await screen.findByRole("button", { name: "Serie 1, pendiente" });
+
+  fireEvent.click(marca);                                                    // hecha
+  fireEvent.click(screen.getByRole("button", { name: "SALTAR DESCANSO" }));
+  fireEvent.click(screen.getByRole("button", { name: "Serie 1, hecha" }));   // corregir un error
+
+  expect(screen.queryByText(/^Descanso /)).toBe(null);
+});
+
+test("un récord se anuncia en el momento de batirlo", async () => {
+  vi.mocked(recordsPersonales).mockResolvedValue([
+    { name: "Press banca", max_weight: 80, reps: 5, sets: null, date: "2026-08-01T10:00:00.000000Z" },
+  ]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Peso en kilos, serie 1"), { target: { value: "85" } });
+  fireEvent.change(screen.getByLabelText("Repeticiones, serie 1"), { target: { value: "3" } });
+  fireEvent.click(screen.getByRole("button", { name: "Serie 1, pendiente" }));
+
+  expect(await screen.findByText(/Press banca: 85 kg, antes 80 kg/)).toBeTruthy();
+});
+
+test("igualar la marca no es un récord", async () => {
+  vi.mocked(recordsPersonales).mockResolvedValue([
+    { name: "Press banca", max_weight: 80, reps: 5, sets: null, date: "2026-08-01T10:00:00.000000Z" },
+  ]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Peso en kilos, serie 1"), { target: { value: "80" } });
+  fireEvent.click(screen.getByRole("button", { name: "Serie 1, pendiente" }));
+
+  expect(screen.queryByText(/Press banca: 80 kg/)).toBe(null);
+});
+
+test("sin conexión el aviso de récord simplemente no sale, y nada se rompe", async () => {
+  // Es el caso normal de esta pantalla: un sótano de gimnasio. El récord de verdad lo
+  // decide el servidor al guardar, así que aquí no hay nada que reintentar ni que avisar.
+  vi.mocked(recordsPersonales).mockRejectedValue(new Error("sin red"));
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Peso en kilos, serie 1"), { target: { value: "85" } });
+  fireEvent.click(screen.getByRole("button", { name: "Serie 1, pendiente" }));
+
+  expect(screen.queryByRole("alert")).toBe(null);
+  expect(screen.getByRole("button", { name: "Serie 1, hecha" })).toBeTruthy();
 });

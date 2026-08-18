@@ -7,9 +7,10 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { recordsPersonales, ultimaSesion, type SerieAnterior } from "../api";
 import { descansoPorDefecto, guardar, leer, type Serie, type Sesion as TipoSesion } from "../borrador";
 import { Aviso, Boton, Comentario, FilaSerie, TituloPantalla } from "../componentes";
-import { seriesHechas } from "../formato";
+import { seriesHechas, textoRecord } from "../formato";
 
 /** Las columnas de cada disposición. La de fuerza vale para gimnasio, casa y calistenia;
     en calistenia el peso se titula «Lastre», que es lo que de verdad se apunta. */
@@ -36,7 +37,60 @@ export default function Sesion() {
     if (!sesion) navegar("/entrenar", { replace: true });
   }, [sesion, navegar]);
 
+  /** Segundos que quedan de descanso, o null si no hay ninguno en marcha. */
+  const [descanso, setDescanso] = useState<number | null>(null);
+
+  // La cuenta atrás. Un único intervalo por descanso, creado una vez, y no un
+  // `setTimeout` que se reprograma en cada render. Reprogramar depende de que React
+  // confirme un render entre cada segundo, y con temporizadores simulados —los tests de
+  // esta pantalla usan `vi.useFakeTimers`— varios segundos se avanzan de golpe sin que
+  // React llegue a confirmarlos todos: el descanso se queda parado. Un intervalo no tiene
+  // ese problema porque no depende de ningún render para seguir contando; y como
+  // `setDescanso` usa la forma con función, no hay valor de descanso capturado y rancio
+  // que pueda desincronizarse. Sin sonido ni vibración, que piden permisos y no funcionan
+  // igual en cada navegador.
+  // ponytail: si molesta no verlo, `navigator.vibrate(200)` en el cero es una línea.
+  useEffect(() => {
+    if (descanso === null) return;
+    const id = setInterval(() => {
+      setDescanso((s) => (s === null || s <= 1 ? null : s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+    // Solo arranca en la transición de «sin descanso» a «con descanso»: si `descanso`
+    // fuera la dependencia, el intervalo se destruiría y se volvería a crear cada
+    // segundo, que es justo el patrón que se acaba de descartar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [descanso === null]);
+
+  /** El mejor peso conocido por ejercicio, y lo que se levantó la última vez.
+   *
+   *  Las dos son comodidades. Si no hay red no se piden y no se avisa de nada: el caso
+   *  normal de esta pantalla es un sótano sin cobertura, y un aviso de «no hemos podido
+   *  cargar tus récords» cada vez sería ruido en la pantalla que menos lo admite. */
+  const [records, setRecords] = useState<Map<string, number>>(new Map());
+  const [anterior, setAnterior] = useState<SerieAnterior[]>([]);
+  const [recordBatido, setRecordBatido] = useState<string | null>(null);
+
+  useEffect(() => {
+    recordsPersonales()
+      .then((lista) => setRecords(new Map(lista.map((r) => [r.name, r.max_weight]))))
+      .catch(() => undefined);
+  }, []);
+
+  const nombreActual = sesion?.exercises[sesion.actual]?.name;
+
+  useEffect(() => {
+    if (!nombreActual) return;
+    setAnterior([]);
+    ultimaSesion(nombreActual)
+      .then(setAnterior)
+      .catch(() => undefined);
+  }, [nombreActual]);
+
   if (!sesion) return null;
+
+  const ejercicio = sesion.exercises[sesion.actual];
+  const hechas = seriesHechas(sesion.exercises);
 
   /** El único camino por el que cambia el estado. Escribe primero y pinta después: si el
    *  disco dice que no, el usuario se entera en la misma pulsación y no un repintado más
@@ -70,14 +124,35 @@ export default function Sesion() {
   }
 
   function marcarSerie(indice: number) {
+    const serie = ejercicio.sets[indice];
+
+    // Desmarcar es corregir un error, no terminar una serie: ahí no toca descansar.
+    if (!serie.hecha) {
+      setDescanso(serie.rest_seconds ?? descansoPorDefecto());
+
+      // El récord de verdad lo decide el servidor al guardar; esto es un aviso local para
+      // que el momento se celebre cuando ocurre y no diez minutos después.
+      const mejor = records.get(ejercicio.name);
+      if (serie.weight_kg != null && mejor != null && serie.weight_kg > mejor) {
+        setRecordBatido(
+          textoRecord({
+            exercise: ejercicio.name,
+            kind: "weight",
+            value: serie.weight_kg,
+            previous: mejor,
+          }),
+        );
+      }
+    }
+
     actualizar((s) => ({
       ...s,
-      exercises: s.exercises.map((ejercicio, i) =>
+      exercises: s.exercises.map((ej, i) =>
         i !== s.actual
-          ? ejercicio
+          ? ej
           : {
-              ...ejercicio,
-              sets: ejercicio.sets.map((serie, j) =>
+              ...ej,
+              sets: ej.sets.map((serie, j) =>
                 j === indice ? { ...serie, hecha: !serie.hecha } : serie,
               ),
             },
@@ -99,9 +174,6 @@ export default function Sesion() {
     }));
   }
 
-  const ejercicio = sesion.exercises[sesion.actual];
-  const hechas = seriesHechas(sesion.exercises);
-
   return (
     <>
       <TituloPantalla pantalla="entreno" />
@@ -120,6 +192,17 @@ export default function Sesion() {
         {ejercicio.objetivo?.reps ? ` de ${ejercicio.objetivo.reps}` : ""}
       </Comentario>
 
+      {descanso !== null && (
+        <div className="descanso">
+          <p aria-live="off">
+            Descanso {Math.floor(descanso / 60)}:{String(descanso % 60).padStart(2, "0")}
+          </p>
+          <Boton type="button" compacto onClick={() => setDescanso(null)}>
+            SALTAR DESCANSO
+          </Boton>
+        </div>
+      )}
+
       <table className="tabla-series">
         <thead>
           <tr>
@@ -135,13 +218,15 @@ export default function Sesion() {
               numero={indice + 1}
               serie={serie}
               modo={sesion.mode}
-              anterior={null}
+              anterior={anterior[indice] ?? null}
               alCambiar={(campo, valor) => cambiarSerie(indice, campo, valor)}
               alMarcar={() => marcarSerie(indice)}
             />
           ))}
         </tbody>
       </table>
+
+      {recordBatido && <Aviso tono="ambar">Récord. {recordBatido}</Aviso>}
 
       {/* El avance con palabras y no solo con la barra: quien use lector de pantalla
           necesita oírlo, y quien no, agradece la cifra. */}
