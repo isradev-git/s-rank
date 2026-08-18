@@ -28,6 +28,12 @@ const DIA: DiaDeHoy = {
     { key: "train", label: "Entrenar", target: 3, progress: 1, xp_reward: 20, is_optional: false, completed: false },
     { key: "steps_8000", label: "8.000 pasos", target: 8000, progress: 5240, xp_reward: 15, is_optional: true, completed: false },
   ],
+  suggested_workout: {
+    reason: "Te faltan 2 entrenos para tu meta de esta semana.",
+    weekly_done: 1,
+    weekly_goal: 3,
+    template: null,
+  },
 };
 
 /** Lo que leería un lector de pantalla: el texto sin nada de lo marcado como dibujo.

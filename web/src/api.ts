@@ -158,11 +158,20 @@ export type Mision = {
   completed: boolean;
 };
 
+export type EntrenoSugerido = {
+  /** Ya viene escrito en castellano: «Te faltan 2 entrenos para tu meta de esta semana». */
+  reason: string;
+  weekly_done: number;
+  weekly_goal: number;
+  template: Plantilla | null;
+};
+
 export type DiaDeHoy = {
   /** Ya viene como fecha suelta, calculada por el servidor en Europe/Madrid. */
   date: string;
   progress: Progreso;
   quests: Mision[];
+  suggested_workout: EntrenoSugerido;
 };
 
 export function diaDeHoy() {
@@ -234,4 +243,169 @@ export async function sesionAbierta(): Promise<Usuario> {
     });
   }
   return quien;
+}
+
+// ── Entrenamiento ───────────────────────────────────────────────────────────
+
+import type { EntrenoPayload, Modo } from "./borrador";
+
+/** Un récord recién batido, tal y como lo devuelve el servidor.
+ *
+ *  ⚠️ El bloque `system` lleva sus récords con **esta misma forma**, no con la
+ *  `{exercise, kind, value}` del ejemplo del spec §5.3: el listener le pasa al Sistema el
+ *  mismo array que construye `WorkoutController::store`. */
+export type NuevoRecord = {
+  name: string;
+  weight_kg: number;
+  previous_pr: number | null;
+  is_first: boolean;
+};
+
+export type Logro = { key: string; name: string; rarity: string };
+
+export type BloqueSistema = {
+  xp_gained: number;
+  level_up: { from: number; to: number } | null;
+  rank_up: { from: string; to: string } | null;
+  achievements_unlocked: Logro[];
+  records: NuevoRecord[];
+  quests_completed: string[];
+  progress: Progreso & {
+    xp_total: number;
+    longest_streak: number;
+    stats: { strength: number; endurance: number; consistency: number; vitality: number };
+  };
+};
+
+export type EntrenoGuardado = {
+  id: string;
+  date: string;
+  mode: Modo;
+  duration_minutes: number;
+  notes: string | null;
+  new_records: NuevoRecord[];
+  system: BloqueSistema;
+};
+
+/** Lo justo que hace falta para deduplicar y para repetir el último entreno. */
+export type EntrenoDelHistorial = {
+  id: string;
+  date: string;
+  mode: Modo;
+  duration_minutes: number;
+  sets: {
+    name: string;
+    weight_kg: number | null;
+    reps: number | null;
+    rest_seconds: number | null;
+    distance_m: number | null;
+    time_seconds: number | null;
+    style: string | null;
+  }[];
+};
+
+/** `GET /api/workouts` devuelve un paginador de Laravel salvo con `all=true`. Aquí se
+ *  desenvuelve, para que ninguna pantalla tenga que saber que existe `data`. */
+export async function entrenos(
+  filtros: { mode?: Modo; per_page?: number } = {},
+): Promise<EntrenoDelHistorial[]> {
+  const parametros = new URLSearchParams();
+  if (filtros.mode) parametros.set("mode", filtros.mode);
+  parametros.set("per_page", String(filtros.per_page ?? 25));
+
+  const pagina = await pedir<{ data: EntrenoDelHistorial[] }>(`/workouts?${parametros}`);
+  return pagina.data;
+}
+
+export function guardarEntreno(payload: EntrenoPayload) {
+  return pedir<EntrenoGuardado>("/workouts", { metodo: "POST", cuerpo: payload });
+}
+
+// ── Plantillas ──────────────────────────────────────────────────────────────
+
+export type EjercicioPlantilla = {
+  id: number;
+  name: string;
+  sets: number | null;
+  reps: number | null;
+};
+
+export type Plantilla = {
+  id: string;
+  /** null = del sistema. Editarla o borrarla da 403, así que esos botones no se enseñan. */
+  user_id: string | null;
+  name: string;
+  description: string | null;
+  level: string | null;
+  mode: Modo | null;
+  duration_minutes: number | null;
+  exercises: EjercicioPlantilla[];
+};
+
+/** Lo único que la API acepta escribir. El `PUT` descarta peso, tiempo y distancia, y el
+ *  `POST` ni siquiera los valida: montar campos para datos que desaparecen al primer
+ *  guardado es enseñar al usuario algo que se le va a borrar solo. */
+export type PlantillaEditable = {
+  name: string;
+  description?: string | null;
+  level?: string | null;
+  mode?: Modo;
+  duration_minutes?: number | null;
+  exercises: { name: string; sets?: number | null; reps?: number | null }[];
+};
+
+export function plantillas() {
+  return pedir<Plantilla[]>("/templates");
+}
+
+export function crearPlantilla(datos: PlantillaEditable) {
+  return pedir<{ message: string; template: Plantilla }>("/templates", {
+    metodo: "POST",
+    cuerpo: datos,
+  });
+}
+
+export function editarPlantilla(id: string, datos: PlantillaEditable) {
+  return pedir<Plantilla>(`/templates/${id}`, { metodo: "PUT", cuerpo: datos });
+}
+
+export function borrarPlantilla(id: string) {
+  return pedir<{ message: string }>(`/templates/${id}`, { metodo: "DELETE" });
+}
+
+// ── Ejercicios ──────────────────────────────────────────────────────────────
+
+export type RecordPersonal = { name: string; max_weight: number; reps: number | null; date: string };
+
+export type SerieAnterior = {
+  weight_kg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  time_seconds: number | null;
+  distance_m: number | null;
+};
+
+/** Solo mira el historial del usuario, así que con historial vacío no devuelve nada. Quien
+ *  lo use tiene que unirlo al catálogo fijo (`catalogoEjercicios`) o el buscador aparece
+ *  mudo el primer día. */
+export function sugerenciasEjercicio(q: string) {
+  return pedir<string[]>(`/exercises/suggestions?q=${encodeURIComponent(q)}`);
+}
+
+/** Los doce ejercicios escritos a mano en el controlador. Es el fondo de armario para
+ *  quien todavía no tiene historial. */
+export function catalogoEjercicios() {
+  return pedir<{ name: string; category: string; muscle_group: string }[]>("/exercises");
+}
+
+export function ultimaSesion(nombre: string) {
+  return pedir<SerieAnterior[]>(`/exercises/last-session?name=${encodeURIComponent(nombre)}`);
+}
+
+/** ⚠️ `max_weight` sale de una consulta cruda y puede llegar como cadena. Se normaliza
+ *  aquí y no en cada pantalla: si una sola se olvida, «85» > «100» y el aviso de récord
+ *  salta cuando no toca. */
+export async function recordsPersonales(): Promise<RecordPersonal[]> {
+  const crudos = await pedir<RecordPersonal[]>("/exercises/records");
+  return crudos.map((r) => ({ ...r, max_weight: Number(r.max_weight) }));
 }
