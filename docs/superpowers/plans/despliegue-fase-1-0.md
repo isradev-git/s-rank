@@ -163,8 +163,47 @@ menores que la variación entre dos peticiones idénticas, que se llevan 50 ms e
 Se subió por FTP el fichero suelto: un controlador no está cacheado, así que surte efecto
 en la siguiente petición sin tocar nada más.
 
+## Copias de seguridad de producción
+
+**La base de datos `srank` de Ginernet no tiene copia automática de nada.** Es el único
+punto del proyecto donde un fallo no se puede deshacer: hay 148 entrenos y 197 comidas
+migrados que ya no están en ningún otro sitio en formato utilizable, y son datos de salud.
+El hosting es FTP sin SSH, así que no hay `mysqldump` programado que valga.
+
+El procedimiento, una vez al mes y a mano:
+
+1. phpMyAdmin de Ginernet → base `srank` → **Exportar** → SQL, estructura y datos.
+2. Guardar el `.sql` **fuera del proyecto** (no en el repositorio: `*.sql` está en el
+   `.gitignore` precisamente porque lleva hashes de contraseña y datos de salud dentro).
+3. Apuntar la fecha aquí abajo.
+
+| Fecha | Quién |
+|---|---|
+| — | pendiente de la primera |
+
+`ponytail:` manual y mensual. Con un usuario, perder como mucho un mes de registros es un
+riesgo aceptable frente a montar un cron con retención. Cuando haya más usuarios, o cuando
+un mes de datos empiece a doler, esto se convierte en una tarea programada del panel.
+
+## Cabeceras, y cómo comprobarlas
+
+`backend/public/.htaccess` manda `Content-Security-Policy`, `X-Content-Type-Options`,
+`Referrer-Policy` y `Strict-Transport-Security`. **Ningún test las cubre**: en local no hay
+Apache en medio, Vite y Laravel hablan directamente. Se comprueban contra el servidor:
+
+```bash
+curl -sI https://s-rank.israelzamora.es/ | grep -iE "content-security|nosniff|referrer|strict-transport"
+```
+
+Tienen que salir las cuatro. Si Ginernet vuelve a inyectar su propia CSP, aparecerá dos
+veces la cabecera y el navegador aplica **la más restrictiva de las dos**: eso rompe la
+aplicación en silencio, y esta orden es la forma de verlo.
+
 ## Recordatorio
 
 `old/database/database.sqlite` y `old/database/database.2026-05-backup.sqlite` son la
 **única copia** de los datos originales de FitLoop y no están en git. Hay que respaldarlos
 fuera del proyecto antes de borrar `old/` al cerrar la fase 1.
+
+Y `srank-inicial.sql` en la raíz del repositorio es el volcado de aquella migración, no un
+respaldo vivo: no refleja nada de lo registrado desde el 10 de agosto de 2026.
