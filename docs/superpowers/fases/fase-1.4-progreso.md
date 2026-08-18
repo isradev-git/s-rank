@@ -14,7 +14,7 @@ De la **1.1**: la pestaña `progreso`, que hasta ahora estaba vacía.
 
 ## Qué hay que construir
 
-### `feature/progress/`
+### Las pantallas (`web/src/pantallas/`)
 
 **Historial de entrenos** — con filtros por modo, rango de fechas y búsqueda por nombre de
 ejercicio o notas. Paginado.

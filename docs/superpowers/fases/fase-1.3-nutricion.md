@@ -12,7 +12,7 @@ asentado.
 
 ## Qué hay que construir
 
-### `feature/nutrition/`
+### Las pantallas (`web/src/pantallas/`)
 
 **Nutrición del día** — las tres comidas más los tentempiés, con el total de macros y
 cuánto queda para el objetivo.

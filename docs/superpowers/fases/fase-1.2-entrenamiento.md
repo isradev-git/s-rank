@@ -20,7 +20,7 @@ que se detalla más abajo. El porqué está en [fase-1.1](fase-1.1-esqueleto.md)
 
 ## Qué hay que construir
 
-### `feature/training/`
+### Las pantallas (`web/src/pantallas/`)
 
 **Elegir entreno** — arrancar de una plantilla, repetir el último, o empezar en blanco.
 `GET /api/system/today` ya devuelve un `suggested_workout` con el motivo escrito en

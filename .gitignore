@@ -1,13 +1,5 @@
-# ── Android / Gradle ──────────────────────────────────────────────────────
-.gradle/
-build/
-local.properties
-captures/
-*.iml
-*.apk
-*.aab
-*.keystore
-*.jks
+# El bloque de Android y Gradle se fue con el esqueleto de Kotlin, que ya solo vive en la
+# etiqueta android-fase-1.1 y lleva su propio .gitignore dentro.
 
 # ── IDEs ──────────────────────────────────────────────────────────────────
 .idea/

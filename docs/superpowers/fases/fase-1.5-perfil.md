@@ -12,7 +12,7 @@ Todo lo demás. Esta es la última.
 
 ## Qué hay que construir
 
-### `feature/profile/`
+### Las pantallas (`web/src/pantallas/`)
 
 **Ficha** — nivel, rango, barra de XP, racha actual y la más larga, las cuatro
 estadísticas y los módulos activos. Es la pantalla que da sentido a todo lo anterior.
