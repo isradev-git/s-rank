@@ -5,7 +5,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import type { BloqueSistema } from "./api";
-import { Aviso, VentanaSistema } from "./componentes";
+import { Aviso, FilaSerie, VentanaSistema } from "./componentes";
+import type { Serie } from "./borrador";
 
 function sistema(campos: Partial<BloqueSistema> = {}): BloqueSistema {
   return {
@@ -129,4 +130,86 @@ test("el aviso se anuncia solo cuando es urgente", () => {
 
   rerender(<Aviso tono="ambar">1 entreno pendiente de subir</Aviso>);
   expect(screen.getByRole("status")).toBeTruthy();
+});
+
+function serie(campos: Partial<Serie> = {}): Serie {
+  return {
+    weight_kg: null, reps: null, rpe: null,
+    distance_m: null, time_seconds: null, style: null,
+    rest_seconds: null, hecha: false,
+    ...campos,
+  };
+}
+
+const NADA = { alCambiar: () => {}, alMarcar: () => {} };
+
+test("una serie hecha se oye con su estado, no con los corchetes", () => {
+  render(
+    <table><tbody>
+      <FilaSerie numero={3} serie={serie({ weight_kg: 80, reps: 5, hecha: true })} modo="gym" anterior={null} {...NADA} />
+    </tbody></table>,
+  );
+
+  // El `[✓]` es decoración. Se oye «serie 3, hecha», que es lo que la regla rectora pide.
+  expect(screen.getByRole("button").getAttribute("aria-label")).toBe("Serie 3, hecha");
+});
+
+test("una serie pendiente dice que lo está", () => {
+  render(
+    <table><tbody>
+      <FilaSerie numero={1} serie={serie()} modo="gym" anterior={null} {...NADA} />
+    </tbody></table>,
+  );
+  expect(screen.getByRole("button").getAttribute("aria-label")).toBe("Serie 1, pendiente");
+});
+
+test("en calistenia la columna de peso se llama lastre", () => {
+  render(
+    <table><tbody>
+      <FilaSerie numero={1} serie={serie()} modo="calisthenics" anterior={null} {...NADA} />
+    </tbody></table>,
+  );
+  expect(screen.getByLabelText("Lastre en kilos, serie 1")).toBeTruthy();
+});
+
+test("en natación se piden distancia y tiempo, no kilos", () => {
+  render(
+    <table><tbody>
+      <FilaSerie numero={1} serie={serie()} modo="swimming" anterior={null} {...NADA} />
+    </tbody></table>,
+  );
+
+  expect(screen.getByLabelText("Distancia en metros, serie 1")).toBeTruthy();
+  expect(screen.getByLabelText("Tiempo en segundos, serie 1")).toBeTruthy();
+  expect(screen.queryByLabelText(/kilos/)).toBe(null);
+});
+
+test("un campo vaciado vuelve a null, no a cero", () => {
+  // Un cero es un dato: «he levantado 0 kg». Vaciar el campo es no haberlo apuntado, y la
+  // diferencia decide si la serie está vacía y no se manda.
+  const cambios: [string, unknown][] = [];
+  render(
+    <table><tbody>
+      <FilaSerie
+        numero={1}
+        serie={serie({ weight_kg: 80 })}
+        modo="gym"
+        anterior={null}
+        alCambiar={(campo, valor) => cambios.push([campo, valor])}
+        alMarcar={() => {}}
+      />
+    </tbody></table>,
+  );
+
+  fireEvent.change(screen.getByLabelText("Peso en kilos, serie 1"), { target: { value: "" } });
+  expect(cambios).toEqual([["weight_kg", null]]);
+});
+
+test("lo que se levantó la última vez se enseña como pista", () => {
+  render(
+    <table><tbody>
+      <FilaSerie numero={1} serie={serie()} modo="gym" anterior={{ weight_kg: 75, reps: 5, rpe: null, time_seconds: null, distance_m: null }} {...NADA} />
+    </tbody></table>,
+  );
+  expect(screen.getByText("75×5")).toBeTruthy();
 });

@@ -5,7 +5,8 @@
 
 import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import type { BloqueSistema, Mision } from "./api";
+import type { BloqueSistema, Mision, SerieAnterior } from "./api";
+import type { Modo, Serie } from "./borrador";
 import { BLOQUES, bloquesEncendidos, textoRecord } from "./formato";
 
 // A diferencia del NumberFormat de Java, Intl.NumberFormat sí se puede compartir:
@@ -283,5 +284,105 @@ export function VentanaSistema({
         CERRAR
       </Boton>
     </div>
+  );
+}
+
+/** Un número que puede no estar. Vaciar el campo devuelve null y no 0: un cero es un dato
+ *  —«he levantado 0 kg»— y no haberlo apuntado es otra cosa. De esa diferencia depende que
+ *  la serie se considere vacía y no se mande. */
+function aNumero(texto: string): number | null {
+  if (texto.trim() === "") return null;
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Una fila de la tabla de series. Se usa de pie, con una mano, con la pantalla sudada y
+ *  con prisa entre series: los objetivos táctiles son de 48 px y no hay ningún gesto, solo
+ *  pulsar y teclear. Fuerza pide kilos, repeticiones y esfuerzo; natación pide distancia,
+ *  tiempo y estilo, no kilos. */
+export function FilaSerie({
+  numero,
+  serie,
+  modo,
+  anterior,
+  alCambiar,
+  alMarcar,
+}: {
+  numero: number;
+  serie: Serie;
+  modo: Modo;
+  /** Lo que se apuntó la última vez en esta misma serie, si se sabe. */
+  anterior: SerieAnterior | null;
+  alCambiar: (campo: keyof Serie, valor: number | string | null) => void;
+  alMarcar: () => void;
+}) {
+  // En calistenia el peso es el lastre que se cuelga, no el del cuerpo.
+  const etiquetaPeso = modo === "calisthenics" ? "Lastre" : "Peso";
+
+  const numerico = (
+    campo: keyof Serie,
+    etiqueta: string,
+    paso: "0.5" | "1",
+  ) => (
+    <td>
+      <input
+        type="number"
+        step={paso}
+        min="0"
+        // El teclado numérico del móvil sale solo. Decimal donde hay medios kilos y
+        // medios metros; entero donde no tiene sentido una coma.
+        inputMode={paso === "0.5" ? "decimal" : "numeric"}
+        aria-label={`${etiqueta}, serie ${numero}`}
+        value={(serie[campo] as number | null) ?? ""}
+        onChange={(e) => alCambiar(campo, aNumero(e.target.value))}
+      />
+    </td>
+  );
+
+  return (
+    <tr className={serie.hecha ? "fila-serie hecha" : "fila-serie"}>
+      <td className="numero" aria-hidden="true">
+        {numero}
+      </td>
+
+      {modo === "swimming" ? (
+        <>
+          {numerico("distance_m", "Distancia en metros", "0.5")}
+          {numerico("time_seconds", "Tiempo en segundos", "1")}
+          <td>
+            <input
+              type="text"
+              aria-label={`Estilo, serie ${numero}`}
+              value={serie.style ?? ""}
+              onChange={(e) => alCambiar("style", e.target.value || null)}
+            />
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="anterior" aria-hidden="true">
+            {anterior?.weight_kg != null && anterior.reps != null
+              ? `${anterior.weight_kg}×${anterior.reps}`
+              : ""}
+          </td>
+          {numerico("weight_kg", `${etiquetaPeso} en kilos`, "0.5")}
+          {numerico("reps", "Repeticiones", "1")}
+          {numerico("rpe", "Esfuerzo del 1 al 10", "1")}
+        </>
+      )}
+
+      <td>
+        <button
+          type="button"
+          className="marca-serie"
+          // El `[✓]` es dibujo: lo que se oye es el estado, con estas palabras.
+          aria-label={`Serie ${numero}, ${serie.hecha ? "hecha" : "pendiente"}`}
+          aria-pressed={serie.hecha}
+          onClick={alMarcar}
+        >
+          <span aria-hidden="true">[{serie.hecha ? "✓" : " "}]</span>
+        </button>
+      </td>
+    </tr>
   );
 }

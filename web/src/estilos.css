@@ -445,3 +445,70 @@ body {
   margin-top: 0;
   padding: 0 0.75rem;
 }
+
+/* ── Fila de serie ────────────────────────────────────────────────────────── */
+
+.tabla-series {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.tabla-series th {
+  color: var(--apagado);
+  font-size: var(--etiqueta);
+  font-weight: normal;
+  letter-spacing: 0.1em;
+  text-align: left;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--lineas);
+}
+
+.fila-serie td {
+  padding: 0.25rem 0.2rem;
+  border-bottom: 1px solid var(--lineas);
+}
+
+.fila-serie .numero,
+.fila-serie .anterior {
+  color: var(--apagado);
+  font-size: var(--nota);
+  white-space: nowrap;
+}
+
+.fila-serie input {
+  width: 100%;
+  min-width: 3.5ch;
+  min-height: 48px;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--lineas);
+  font-family: inherit;
+  font-size: var(--cuerpo);
+  text-align: center;
+}
+
+.fila-serie input:focus {
+  outline: none;
+  border-color: var(--ambar);
+}
+
+.marca-serie {
+  min-width: 48px;
+  min-height: 48px;
+  background: transparent;
+  border: none;
+  color: var(--apagado);
+  font-family: inherit;
+  font-size: var(--seccion);
+  cursor: pointer;
+}
+
+.fila-serie.hecha .marca-serie {
+  color: var(--verde);
+}
+
+.marca-serie:focus-visible {
+  outline: 2px solid var(--ambar);
+  outline-offset: -2px;
+}
