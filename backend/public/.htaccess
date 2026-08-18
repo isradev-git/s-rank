@@ -11,6 +11,22 @@
 <IfModule mod_headers.c>
     Header always unset Content-Security-Policy
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+    # Las fotos de alimentos y recetas las sube el usuario y se sirven desde este mismo
+    # dominio, así que Apache no puede ponerse a adivinar el tipo de un fichero: si
+    # decide que un .jpg es HTML, ese HTML se ejecuta con la sesión del usuario dentro.
+    Header always set X-Content-Type-Options "nosniff"
+
+    # La URL de una pantalla puede llevar datos dentro (/entrenos/482, /alimentos?q=...).
+    # Sin esto, cualquier petición a otro dominio se la lleva puesta en la cabecera.
+    Header always set Referrer-Policy "no-referrer"
+
+    # Un año de HTTPS obligatorio. Sin «preload»: eso se pide en una lista externa, se
+    # aplica al dominio entero y no se puede deshacer a tiempo si algo va mal.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # No hace falta X-Frame-Options: el «frame-ancestors 'none'» de arriba es su versión
+    # moderna y lo entienden todos los navegadores que soportan esta CSP.
 </IfModule>
 
 # La raíz pasa siempre por Laravel, aunque haya un index.html al lado. Es lo que hace
