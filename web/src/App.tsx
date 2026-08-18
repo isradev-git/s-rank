@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes } from "react-router";
-import { SESION_CADUCADA, salir, usuarioActual, type Usuario } from "./api";
+import { SESION_CADUCADA, salir, sesionAbierta, usuarioActual, type Usuario } from "./api";
 import { Boton, Comentario, TituloPantalla } from "./componentes";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
@@ -83,16 +83,14 @@ export default function App() {
   }
 
   if (usuario === null) {
+    // Nada de tragarse el resultado: si después de entrar el servidor dice que no hay
+    // nadie, `sesionAbierta` lanza un error con su texto y lo enseña la propia pantalla.
+    const entrar = () => sesionAbierta().then(setUsuario);
+
     return (
       <Routes>
-        <Route
-          path="/login"
-          element={<Login alEntrar={() => usuarioActual().then(setUsuario)} />}
-        />
-        <Route
-          path="/registro"
-          element={<Registro alEntrar={() => usuarioActual().then(setUsuario)} />}
-        />
+        <Route path="/login" element={<Login alEntrar={entrar} />} />
+        <Route path="/registro" element={<Registro alEntrar={entrar} />} />
         <Route path="/recuperar" element={<Recuperar />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

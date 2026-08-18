@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { ErrorApi, registrar, type Fallo } from "../api";
 import { Boton, Campo, Comentario, TituloPantalla } from "../componentes";
 
-export default function Registro({ alEntrar }: { alEntrar: () => void }) {
+export default function Registro({ alEntrar }: { alEntrar: () => Promise<void> }) {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -18,7 +18,7 @@ export default function Registro({ alEntrar }: { alEntrar: () => void }) {
     try {
       // El servidor deja la sesión abierta al registrar, así que se entra directo.
       await registrar(nombre, correo, contrasena);
-      alEntrar();
+      await alEntrar();
     } catch (error) {
       setFallo(
         error instanceof ErrorApi

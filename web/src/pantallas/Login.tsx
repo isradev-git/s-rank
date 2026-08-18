@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { ErrorApi, entrar, type Fallo } from "../api";
 import { Boton, Campo, Comentario, TituloPantalla } from "../componentes";
 
-export default function Login({ alEntrar }: { alEntrar: () => void }) {
+export default function Login({ alEntrar }: { alEntrar: () => Promise<void> }) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [fallo, setFallo] = useState<Fallo | null>(null);
@@ -16,7 +16,9 @@ export default function Login({ alEntrar }: { alEntrar: () => void }) {
 
     try {
       await entrar(correo, contrasena);
-      alEntrar();
+      // Con `await`: si la sesión no ha quedado abierta, el error cae en el catch de abajo
+      // y se ve. Sin él, la promesa se pierde y el botón se queda en «ENTRANDO…».
+      await alEntrar();
     } catch (error) {
       // El error ya viene traducido de api.ts. Aquí solo se decide dónde ponerlo.
       setFallo(

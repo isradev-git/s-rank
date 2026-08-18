@@ -3,7 +3,7 @@
    todo esto —ningún código HTTP en pantalla— se rompe sin hacer ruido. */
 
 import { afterEach, expect, test, vi } from "vitest";
-import { ErrorApi, SESION_CADUCADA, pedir } from "./api";
+import { ErrorApi, SESION_CADUCADA, pedir, sesionAbierta } from "./api";
 
 /** Sustituye a fetch por uno que devuelve lo que se le diga. */
 function servidorQueResponde(estado: number, cuerpo: unknown = {}) {
@@ -104,6 +104,19 @@ test("preguntar quién hay al arrancar no avisa de sesión caducada", async () =
 
   expect(avisado).not.toHaveBeenCalled();
   window.removeEventListener(SESION_CADUCADA, avisado);
+});
+
+test("entrar bien y que el servidor siga diciendo que no hay nadie es un fallo con nombre", async () => {
+  // Pasó en producción el 18 de agosto: el login contestaba 200 y el /api/user siguiente
+  // 401, porque el navegador había dejado de mandar la cabecera Referer y Sanctum ya no
+  // reconocía la petición como del frontend. Aquello se arregló en el .htaccess, pero el
+  // silencio no: la pantalla se quedaba con el botón en «ENTRANDO…» para siempre.
+  servidorQueResponde(401, { message: "Unauthenticated." });
+
+  const fallo = await falloDe(sesionAbierta());
+
+  expect(fallo.general).toMatch(/no ha guardado la sesión/);
+  expect(fallo.general).not.toMatch(/\d{3}/);
 });
 
 test("toda petición manda Accept: application/json", async () => {

@@ -208,3 +208,23 @@ export async function usuarioActual(): Promise<Usuario | null> {
     return null;
   }
 }
+
+/** Igual que `usuarioActual`, pero para después de entrar o de registrarse: ahí el
+ *  servidor tiene que reconocernos, y que diga que no hay nadie no es «todavía nadie»,
+ *  es un fallo.
+ *
+ *  Pasa cuando el navegador no guarda la cookie de sesión que el login acaba de dar. Se
+ *  vio en producción el 18 de agosto con `Referrer-Policy: no-referrer` en el servidor:
+ *  login 200 y el /api/user siguiente 401. Sin este error, la pantalla de entrar no tiene
+ *  nada que enseñar y se queda con el botón puesto en «ENTRANDO…» para siempre. */
+export async function sesionAbierta(): Promise<Usuario> {
+  const quien = await usuarioActual();
+  if (!quien) {
+    throw new ErrorApi({
+      general:
+        "Has entrado, pero tu navegador no ha guardado la sesión. Comprueba que permite cookies y vuelve a intentarlo.",
+      campos: {},
+    });
+  }
+  return quien;
+}
