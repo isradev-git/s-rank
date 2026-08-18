@@ -163,6 +163,32 @@ menores que la variación entre dos peticiones idénticas, que se llevan 50 ms e
 Se subió por FTP el fichero suelto: un controlador no está cacheado, así que surte efecto
 en la siguiente petición sin tocar nada más.
 
+## `composer audit` antes de cada despliegue
+
+```bash
+cd backend && composer audit --no-dev
+```
+
+El 18 de agosto daba **36 avisos en 11 paquetes de producción, cinco de gravedad alta**, y
+tres eran del camino que esta aplicación usa de verdad: la inyección CRLF en la regla de
+validación `email` de Laravel, la inyección de órdenes SMTP por CRLF en `Symfony\Mime\Address`
+—o sea, el correo del código de recuperación, al que llega cualquiera sin cuenta— y la
+confusión de rutas en las URL firmadas temporales, que es el mecanismo con el que la fase
+1.5 va a publicar el informe de salud.
+
+Se cerraron los once con un `composer update`, sin tocar ninguna restricción de
+`composer.json` ni una línea de código. Aquí no hay Composer en el servidor: **el `vendor/`
+actualizado se sube por FTP**, y son unos 6.800 ficheros.
+
+Para que la aplicación no pase el rato de la subida con medio `vendor/` viejo y medio
+nuevo, súbelo al lado y cámbialo de sitio al final, que por FTP es instantáneo:
+
+1. Sube `deploy/vendor/` como `vendor.nuevo/`.
+2. Renombra `vendor` → `vendor.viejo` y `vendor.nuevo` → `vendor`.
+3. Sube `deploy/bootstrap/cache/` (lleva el mapa de proveedores de los paquetes).
+4. Si algo falla, los dos renombrados al revés devuelven la versión anterior en segundos.
+5. Cuando la aplicación va, borra `vendor.viejo`.
+
 ## Copias de seguridad de producción
 
 **La base de datos `srank` de Ginernet no tiene copia automática de nada.** Es el único
