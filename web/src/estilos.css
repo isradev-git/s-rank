@@ -583,3 +583,16 @@ body {
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
+
+.anadir-ejercicio {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lineas);
+}
+
+.anadir-ejercicio .campo {
+  flex: 1;
+}

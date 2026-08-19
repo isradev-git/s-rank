@@ -7,7 +7,13 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { recordsPersonales, ultimaSesion, type SerieAnterior } from "../api";
+import {
+  catalogoEjercicios,
+  recordsPersonales,
+  sugerenciasEjercicio,
+  ultimaSesion,
+  type SerieAnterior,
+} from "../api";
 import {
   borrar,
   descansoPorDefecto,
@@ -104,6 +110,21 @@ export default function Sesion() {
       vigente = false;
     };
   }, [nombreActual]);
+
+  const [nombreNuevo, setNombreNuevo] = useState("");
+  const [sugerencias, setSugerencias] = useState<string[]>([]);
+  const [catalogo, setCatalogo] = useState<string[]>([]);
+
+  useEffect(() => {
+    // El catálogo son doce nombres fijos escritos en el controlador; las sugerencias
+    // salen solo del historial del usuario, así que el primer día vienen vacías. Se unen
+    // porque por separado ninguna de las dos basta.
+    catalogoEjercicios().then((lista) => setCatalogo(lista.map((e) => e.name))).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    sugerenciasEjercicio(nombreNuevo).then(setSugerencias).catch(() => undefined);
+  }, [nombreNuevo]);
 
   const [terminando, setTerminando] = useState(false);
   const [minutos, setMinutos] = useState("");
@@ -287,16 +308,85 @@ export default function Sesion() {
     }));
   }
 
+  function anadirEjercicio() {
+    const nombre = nombreNuevo.trim();
+    if (!nombre) return;
+
+    actualizar((s) => ({
+      ...s,
+      exercises: [...s.exercises, { name: nombre, objetivo: null, sets: [serieNueva(descansoPorDefecto())] }],
+      actual: s.exercises.length,
+    }));
+    setNombreNuevo("");
+  }
+
+  function quitarEjercicio() {
+    if (!confirm("¿Quitar este ejercicio y todas sus series?")) return;
+
+    actualizar((s) => {
+      const exercises = s.exercises.filter((_, i) => i !== s.actual);
+      return {
+        ...s,
+        exercises,
+        // Sin esto, quitar el último dejaría `actual` apuntando a un ejercicio que ya no
+        // está y la pantalla intentaría pintar `undefined`.
+        actual: Math.max(0, Math.min(s.actual, exercises.length - 1)),
+      };
+    });
+  }
+
+  // Las del historial primero: son las que esta persona usa de verdad.
+  const opciones = [...new Set([...sugerencias, ...catalogo])];
+
+  const avisoSinSitio = sinSitio && (
+    <Aviso tono="rojo">
+      Este navegador no está guardando el entreno: no cierres la aplicación hasta
+      terminarlo y subirlo.
+    </Aviso>
+  );
+
+  const bloqueAnadir = (
+    <div className="anadir-ejercicio">
+      <Campo
+        etiqueta="Nombre del ejercicio"
+        name="ejercicio"
+        type="text"
+        list="ejercicios-conocidos"
+        autoComplete="off"
+        value={nombreNuevo}
+        onChange={(e) => setNombreNuevo(e.target.value)}
+      />
+      {/* <datalist> nativo: el navegador ya sabe filtrar y desplegar, y funciona con el
+          teclado del móvil sin que haya que escribir un desplegable a mano. */}
+      <datalist id="ejercicios-conocidos">
+        {opciones.map((nombre) => (
+          <option key={nombre} value={nombre} />
+        ))}
+      </datalist>
+      <Boton type="button" compacto onClick={anadirEjercicio}>
+        AÑADIR EJERCICIO
+      </Boton>
+    </div>
+  );
+
+  // «Empezar en blanco» deja una sesión sin ningún ejercicio, y también se llega aquí
+  // quitando el último. No es un error: es el estado inicial de un entreno libre.
+  if (!ejercicio) {
+    return (
+      <>
+        <TituloPantalla pantalla="entreno" />
+        {avisoSinSitio}
+        <Comentario>Añade el primer ejercicio para empezar.</Comentario>
+        {bloqueAnadir}
+      </>
+    );
+  }
+
   return (
     <>
       <TituloPantalla pantalla="entreno" />
 
-      {sinSitio && (
-        <Aviso tono="rojo">
-          Este navegador no está guardando el entreno: no cierres la aplicación hasta
-          terminarlo y subirlo.
-        </Aviso>
-      )}
+      {avisoSinSitio}
 
       <h2 className="nombre-ejercicio">{ejercicio.name}</h2>
       <Comentario>
@@ -365,10 +455,15 @@ export default function Sesion() {
         >
           SIGUIENTE
         </Boton>
+        <Boton type="button" compacto onClick={quitarEjercicio}>
+          QUITAR EJERCICIO
+        </Boton>
         <Boton type="button" compacto onClick={() => setTerminando(true)}>
           TERMINAR
         </Boton>
       </div>
+
+      {bloqueAnadir}
     </>
   );
 }

@@ -10,7 +10,14 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, expect, test, vi } from "vitest";
 import { entregar, guardar, leer, pendientes, type Sesion as TipoSesion } from "../borrador";
-import { ErrorApi, guardarEntreno, recordsPersonales, type EntrenoGuardado } from "../api";
+import {
+  ErrorApi,
+  catalogoEjercicios,
+  guardarEntreno,
+  recordsPersonales,
+  sugerenciasEjercicio,
+  type EntrenoGuardado,
+} from "../api";
 import Sesion from "./Sesion";
 
 vi.mock("../api", async (importOriginal) => ({
@@ -18,6 +25,8 @@ vi.mock("../api", async (importOriginal) => ({
   recordsPersonales: vi.fn().mockResolvedValue([]),
   ultimaSesion: vi.fn().mockResolvedValue([]),
   guardarEntreno: vi.fn(),
+  sugerenciasEjercicio: vi.fn().mockResolvedValue([]),
+  catalogoEjercicios: vi.fn().mockResolvedValue([]),
 }));
 
 // `entregar` es el único camino por el que se puede perder un entreno (`borrador.ts`), así
@@ -84,6 +93,14 @@ const pintar = () =>
 beforeEach(() => {
   localStorage.clear();
   guardar(EN_CURSO);
+
+  // Los valores por defecto se vuelven a poner aquí y no solo en la factoría del mock.
+  // `clearMocks` borra las llamadas, no las implementaciones, así que un
+  // `mockResolvedValue` puesto dentro de un test se queda puesto para todos los que vengan
+  // detrás: el orden de los tests pasaría a ser parte de lo que comprueban.
+  vi.mocked(recordsPersonales).mockResolvedValue([]);
+  vi.mocked(sugerenciasEjercicio).mockResolvedValue([]);
+  vi.mocked(catalogoEjercicios).mockResolvedValue([]);
 });
 
 test("apuntar un peso lo escribe en disco en el momento, no al salir", async () => {
@@ -309,4 +326,81 @@ test("si no se puede ni subir ni guardar, el borrador NO se borra", async () => 
   // …y sobre todo: el entreno sigue en el móvil y no se ha ido a ninguna parte.
   expect(leer()).not.toBe(null);
   expect(navegar).not.toHaveBeenCalled();
+});
+
+test("una sesión en blanco pide el primer ejercicio en vez de romperse", async () => {
+  guardar({ ...EN_CURSO, nombre: "Entreno libre", exercises: [] });
+  pintar();
+
+  expect(await screen.findByLabelText("Nombre del ejercicio")).toBeTruthy();
+  expect(screen.getByText("Añade el primer ejercicio para empezar.")).toBeTruthy();
+});
+
+test("se puede escribir un ejercicio que no está en ninguna lista", async () => {
+  guardar({ ...EN_CURSO, exercises: [] });
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Nombre del ejercicio"), {
+    target: { value: "Hip thrust en multipower" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "AÑADIR EJERCICIO" }));
+
+  // Escribir libre es como entran los ejercicios nuevos: el catálogo son doce nombres
+  // fijos y las sugerencias solo salen del historial.
+  expect(leer()!.exercises[0].name).toBe("Hip thrust en multipower");
+  expect(leer()!.exercises[0].sets).toHaveLength(1);
+});
+
+test("un ejercicio sin nombre no se añade", async () => {
+  guardar({ ...EN_CURSO, exercises: [] });
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Nombre del ejercicio"), { target: { value: "   " } });
+  fireEvent.click(screen.getByRole("button", { name: "AÑADIR EJERCICIO" }));
+
+  expect(leer()!.exercises).toEqual([]);
+});
+
+test("las sugerencias del historial salen antes que el catálogo, y sin repetirse", async () => {
+  vi.mocked(sugerenciasEjercicio).mockResolvedValue(["Press banca", "Hip thrust"]);
+  vi.mocked(catalogoEjercicios).mockResolvedValue([
+    { name: "Sentadilla", category: "Pierna", muscle_group: "Cuádriceps" },
+    { name: "Press banca", category: "Empuje", muscle_group: "Pecho" },
+  ]);
+  guardar({ ...EN_CURSO, exercises: [] });
+  pintar();
+
+  // El <datalist> lleva `hidden` de serie —no se pinta, lo despliega el navegador—, así
+  // que hay que pedirle a la consulta que mire también lo oculto.
+  const opciones = await screen.findAllByRole("option", { hidden: true });
+  expect(opciones.map((o) => o.getAttribute("value"))).toEqual([
+    "Press banca",
+    "Hip thrust",
+    "Sentadilla",
+  ]);
+});
+
+test("quitar un ejercicio pide confirmación y no deja el índice fuera de sitio", async () => {
+  guardar({
+    ...EN_CURSO,
+    actual: 1,
+    exercises: [EN_CURSO.exercises[0], { name: "Remo", objetivo: null, sets: [] }],
+  });
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "QUITAR EJERCICIO" }));
+
+  expect(leer()!.exercises.map((e) => e.name)).toEqual(["Press banca"]);
+  // Si `actual` se quedara en 1 la pantalla intentaría pintar un ejercicio que ya no está.
+  expect(leer()!.actual).toBe(0);
+});
+
+test("si se dice que no, no se quita nada", async () => {
+  vi.spyOn(window, "confirm").mockReturnValue(false);
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "QUITAR EJERCICIO" }));
+
+  expect(leer()!.exercises).toHaveLength(1);
 });
