@@ -11,6 +11,13 @@ export default defineConfig({
     // Desmonta lo pintado entre test y test: sin esto el segundo encuentra dos botones.
     setupFiles: ["./src/tests-preparacion.ts"],
     restoreMocks: true,
+    // `restoreMocks` solo toca los espías de `vi.spyOn`; los `vi.fn()` que devuelve una
+    // factoría de `vi.mock` no los limpia nadie, y sus llamadas se van acumulando de un
+    // test al siguiente hasta que un `not.toHaveBeenCalled()` falla sin que se vea por
+    // qué. `clearMocks` borra el historial de todos. No pone `mockReset`: eso borraría
+    // también implementaciones como el `vi.fn().mockResolvedValue([])` de los mocks de
+    // api.ts, que se declaran una vez para todo el fichero.
+    clearMocks: true,
   },
   server: {
     // El proyecto vive en /mnt/c, y WSL no entrega eventos de inotify para el disco de

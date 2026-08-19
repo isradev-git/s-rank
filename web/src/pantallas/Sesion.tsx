@@ -8,9 +8,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { recordsPersonales, ultimaSesion, type SerieAnterior } from "../api";
-import { descansoPorDefecto, guardar, leer, type Serie, type Sesion as TipoSesion } from "../borrador";
-import { Aviso, Boton, Comentario, FilaSerie, TituloPantalla } from "../componentes";
-import { seriesHechas, textoRecord } from "../formato";
+import {
+  borrar,
+  descansoPorDefecto,
+  entregar,
+  guardar,
+  leer,
+  type Serie,
+  type Sesion as TipoSesion,
+} from "../borrador";
+import { Aviso, Boton, Campo, Comentario, FilaSerie, TituloPantalla } from "../componentes";
+import { duracionMinutos, seriesHechas, textoRecord, volumenTotal } from "../formato";
 
 /** Las columnas de cada disposición. La de fuerza vale para gimnasio, casa y calistenia;
     en calistenia el peso se titula «Lastre», que es lo que de verdad se apunta. */
@@ -81,13 +89,72 @@ export default function Sesion() {
 
   useEffect(() => {
     if (!nombreActual) return;
+    // Con la navegación entre ejercicios de esta tarea, esta petición ya se puede quedar
+    // en vuelo cuando cambia `nombreActual`: sin la guarda, una respuesta lenta del primer
+    // ejercicio llegaría con el segundo ya en pantalla y pintaría un «anterior» que es de
+    // otro ejercicio distinto, sin que nada lo delate.
+    let vigente = true;
     setAnterior([]);
     ultimaSesion(nombreActual)
-      .then(setAnterior)
+      .then((datos) => {
+        if (vigente) setAnterior(datos);
+      })
       .catch(() => undefined);
+    return () => {
+      vigente = false;
+    };
   }, [nombreActual]);
 
+  const [terminando, setTerminando] = useState(false);
+  const [minutos, setMinutos] = useState("");
+  const [notas, setNotas] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  // La duración se propone al abrir el paso, no en cada repintado: si se recalculara sola
+  // borraría lo que el usuario acabara de corregir.
+  useEffect(() => {
+    if (terminando && sesion) setMinutos(String(duracionMinutos(sesion.inicio)));
+  }, [terminando, sesion?.inicio]);
+
   if (!sesion) return null;
+
+  if (terminando) {
+    return (
+      <>
+        <TituloPantalla pantalla="terminar" />
+        <Comentario>{sesion.nombre}</Comentario>
+
+        <Campo
+          etiqueta="Duración en minutos"
+          name="duracion"
+          type="number"
+          min="0"
+          max="600"
+          inputMode="numeric"
+          value={minutos}
+          onChange={(e) => setMinutos(e.target.value)}
+        />
+
+        <Campo
+          etiqueta="Notas (opcional)"
+          name="notas"
+          type="text"
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+        />
+
+        {fallo && <Aviso tono="rojo">{fallo}</Aviso>}
+
+        <Boton type="button" onClick={() => void guardarEntrenoEntero()} disabled={guardando}>
+          {guardando ? "GUARDANDO…" : "GUARDAR"}
+        </Boton>
+        <Boton type="button" compacto onClick={() => setTerminando(false)} disabled={guardando}>
+          SEGUIR ENTRENANDO
+        </Boton>
+      </>
+    );
+  }
 
   const ejercicio = sesion.exercises[sesion.actual];
   const hechas = seriesHechas(sesion.exercises);
@@ -158,6 +225,52 @@ export default function Sesion() {
             },
       ),
     }));
+  }
+
+  function irAEjercicio(indice: number) {
+    actualizar((s) => ({ ...s, actual: Math.min(Math.max(0, indice), s.exercises.length - 1) }));
+    setDescanso(null);
+    setRecordBatido(null);
+  }
+
+  async function guardarEntrenoEntero() {
+    if (!sesion || guardando) return;
+    setGuardando(true);
+
+    const duracion = Number(minutos) || 0;
+    const volumen = volumenTotal(sesion.exercises);
+    const series = seriesHechas(sesion.exercises);
+
+    const resultado = await entregar(sesion, duracion, notas);
+
+    // `null` significa que no subió Y tampoco se pudo escribir en el móvil. El entreno
+    // solo existe en esta pantalla: borrar el borrador aquí sería perderlo, que es lo
+    // único irrecuperable de toda la aplicación. Se deja donde está y se avisa.
+    if (resultado === null) {
+      setGuardando(false);
+      setFallo(
+        "No hemos podido guardar el entreno y tampoco cabe en el móvil. " +
+          "No cierres esta pantalla: libera espacio y vuelve a darle a guardar.",
+      );
+      return;
+    }
+
+    // Subido o encolado: en los dos casos el dato está a salvo fuera de esta pantalla, y
+    // esta es la única transición que borra el borrador.
+    borrar();
+
+    navegar("/entrenar/resumen", {
+      replace: true,
+      state: {
+        nombre: sesion.nombre,
+        duracion,
+        volumen,
+        series,
+        // `"encolado"` no trae bloque `system`: el XP lo calcula el servidor cuando por
+        // fin reciba el entreno, y el resumen ya sabe pintar el caso sin él.
+        guardado: resultado === "encolado" ? null : resultado,
+      },
+    });
   }
 
   function anadirSerie() {
@@ -235,6 +348,25 @@ export default function Sesion() {
       <div className="acciones">
         <Boton type="button" compacto onClick={anadirSerie}>
           AÑADIR SERIE
+        </Boton>
+        <Boton
+          type="button"
+          compacto
+          disabled={sesion.actual === 0}
+          onClick={() => irAEjercicio(sesion.actual - 1)}
+        >
+          ANTERIOR
+        </Boton>
+        <Boton
+          type="button"
+          compacto
+          disabled={sesion.actual === sesion.exercises.length - 1}
+          onClick={() => irAEjercicio(sesion.actual + 1)}
+        >
+          SIGUIENTE
+        </Boton>
+        <Boton type="button" compacto onClick={() => setTerminando(true)}>
+          TERMINAR
         </Boton>
       </div>
     </>

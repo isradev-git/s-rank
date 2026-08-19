@@ -9,15 +9,46 @@ import { StrictMode } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, expect, test, vi } from "vitest";
-import { guardar, leer, type Sesion as TipoSesion } from "../borrador";
-import { recordsPersonales } from "../api";
+import { entregar, guardar, leer, pendientes, type Sesion as TipoSesion } from "../borrador";
+import { ErrorApi, guardarEntreno, recordsPersonales, type EntrenoGuardado } from "../api";
 import Sesion from "./Sesion";
 
 vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api")>()),
   recordsPersonales: vi.fn().mockResolvedValue([]),
   ultimaSesion: vi.fn().mockResolvedValue([]),
+  guardarEntreno: vi.fn(),
 }));
+
+// `entregar` es el único camino por el que se puede perder un entreno (`borrador.ts`), así
+// que el test que cierra ese agujero necesita sustituirlo por un `null` directo. El resto
+// de tests de esta pantalla no lo tocan: se envuelve la implementación real —sube o encola
+// de verdad— para que solo el test que lo pide vea el `null` que no está a salvo en ningún
+// sitio. Nada restaura esa implementación entre test y test —`clearMocks` borra llamadas,
+// no implementaciones—, así que el `null` se pide con `...Once`: se gasta en la única
+// llamada de ese test y el siguiente vuelve a encontrarse el `entregar` de verdad.
+vi.mock("../borrador", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../borrador")>();
+  return { ...real, entregar: vi.fn(real.entregar) };
+});
+
+// El brief comprueba `navegar` a secas: sin este mock no habría ningún identificador al
+// que apuntar esa aserción. Se sustituye solo `useNavigate`; `MemoryRouter` sigue siendo
+// el real, que es el que ya usaban los tests anteriores.
+const { navegar } = vi.hoisted(() => ({ navegar: vi.fn() }));
+vi.mock("react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router")>()),
+  useNavigate: () => navegar,
+}));
+
+/** Lo que devuelve `POST /api/workouts`, recortado a lo que se usa aquí. Igual que en la
+ *  tarea 4 (`borrador.test.ts`). */
+const SUBIDO = {
+  id: "9f1c2a3e-0000-4000-8000-000000000001",
+  date: "2026-08-18T17:00:00.000000Z",
+  new_records: [],
+  system: { xp_gained: 80 },
+} as unknown as EntrenoGuardado;
 
 const EN_CURSO: TipoSesion = {
   v: 1,
@@ -190,4 +221,92 @@ test("sin conexión el aviso de récord simplemente no sale, y nada se rompe", a
 
   expect(screen.queryByRole("alert")).toBe(null);
   expect(screen.getByRole("button", { name: "Serie 1, hecha" })).toBeTruthy();
+});
+
+test("se pasa de ejercicio y el anterior conserva lo apuntado", async () => {
+  guardar({
+    ...EN_CURSO,
+    exercises: [
+      EN_CURSO.exercises[0],
+      { name: "Remo", objetivo: null, sets: [{ ...EN_CURSO.exercises[0].sets[0] }] },
+    ],
+  });
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Peso en kilos, serie 1"), { target: { value: "80" } });
+  fireEvent.click(screen.getByRole("button", { name: "SIGUIENTE" }));
+
+  expect(await screen.findByRole("heading", { name: "Remo" })).toBeTruthy();
+  expect(leer()!.exercises[0].sets[0].weight_kg).toBe(80);
+  expect(leer()!.actual).toBe(1);
+});
+
+test("terminar propone la duración transcurrida y deja corregirla", async () => {
+  vi.setSystemTime(new Date("2026-08-18T17:45:00Z"));
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "TERMINAR" }));
+
+  // 17:00 a 17:45. La cifra viene puesta; corregirla es lo que salva a un borrador que se
+  // retoma al día siguiente, y la duración es lo que decide el XP.
+  expect((screen.getByLabelText("Duración en minutos") as HTMLInputElement).value).toBe("45");
+});
+
+test("al guardar sin red la sesión queda en la cola y el borrador se limpia", async () => {
+  vi.setSystemTime(new Date("2026-08-18T17:45:00Z"));
+  vi.mocked(guardarEntreno).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "TERMINAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  // El dato está a salvo en los dos casos —subido o encolado—, y esta es la única
+  // transición que borra el borrador.
+  await vi.waitFor(() => expect(pendientes()).toHaveLength(1));
+  expect(leer()).toBe(null);
+  expect(pendientes()[0].duracion).toBe(45);
+});
+
+test("al guardar con red no queda nada pendiente", async () => {
+  vi.setSystemTime(new Date("2026-08-18T17:45:00Z"));
+  vi.mocked(guardarEntreno).mockResolvedValue(SUBIDO);
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "TERMINAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  await vi.waitFor(() => expect(leer()).toBe(null));
+  expect(pendientes()).toEqual([]);
+});
+
+test("mientras se guarda no se puede pulsar dos veces", async () => {
+  vi.setSystemTime(new Date("2026-08-18T17:45:00Z"));
+  vi.mocked(guardarEntreno).mockImplementation(() => new Promise(() => {}));  // nunca resuelve
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "TERMINAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  // Dos POST del mismo entreno con un segundo de diferencia son dos entrenos distintos:
+  // el deduplicado los distingue por `date` y ahí las dos fechas serían la misma... pero
+  // el segundo saldría antes de que el primero conteste y no hay a quién preguntar.
+  expect((await screen.findByRole("button", { name: "GUARDANDO…" })).hasAttribute("disabled")).toBe(true);
+});
+
+test("si no se puede ni subir ni guardar, el borrador NO se borra", async () => {
+  vi.mocked(entregar).mockResolvedValueOnce(null);
+  pintar();
+
+  fireEvent.click(screen.getByRole("button", { name: "TERMINAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  // Se avisa en español, sin número de error…
+  expect((await screen.findByRole("alert")).textContent).toContain("No cierres esta pantalla");
+  expect(document.body.textContent).not.toMatch(/\b[45]\d\d\b/);
+
+  // …y sobre todo: el entreno sigue en el móvil y no se ha ido a ninguna parte.
+  expect(leer()).not.toBe(null);
+  expect(navegar).not.toHaveBeenCalled();
 });
