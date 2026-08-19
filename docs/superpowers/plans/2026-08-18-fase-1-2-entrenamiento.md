@@ -3636,7 +3636,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, expect, test, vi } from "vitest";
 import { diaDeHoy, entrenos, plantillas } from "../api";
-import { leer } from "../borrador";
+import { guardar, leer } from "../borrador";
 import Elegir from "./Elegir";
 
 vi.mock("../api", async (importOriginal) => ({
@@ -3645,6 +3645,14 @@ vi.mock("../api", async (importOriginal) => ({
   entrenos: vi.fn(),
   plantillas: vi.fn(),
 }));
+
+// Se envuelve la implementación real —escribe de verdad en localStorage, que es lo que
+// comprueban casi todos los tests de aquí— y solo el que mira el disco lleno la sustituye,
+// con `...Once` para que no se quede puesta.
+vi.mock("../borrador", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../borrador")>();
+  return { ...real, guardar: vi.fn(real.guardar) };
+});
 
 const PLANTILLA = {
   id: "t-1", user_id: null, name: "Torso pesado", description: null,
@@ -3704,6 +3712,15 @@ test("empezar desde una plantilla deja una serie por ejercicio, lista para relle
   expect(await screen.findByText("sesión")).toBeTruthy();
 });
 
+test("la plantilla sugerida no sale también en la lista de abajo", async () => {
+  // Dos botones con el mismo nombre accesible son dos botones idénticos para quien usa
+  // lector de pantalla, y no hay forma de saber que hacen lo mismo.
+  pintar();
+  await screen.findByRole("button", { name: "EMPEZAR TORSO PESADO" });
+
+  expect(screen.getAllByRole("button", { name: "EMPEZAR TORSO PESADO" })).toHaveLength(1);
+});
+
 test("empezar en blanco no inventa ningún ejercicio", async () => {
   pintar();
 
@@ -3711,6 +3728,19 @@ test("empezar en blanco no inventa ningún ejercicio", async () => {
 
   expect(leer()!.exercises).toEqual([]);
   expect(leer()!.nombre).toBe("Entreno libre");
+});
+
+test("si no cabe en el móvil se avisa y no se pasa a una pantalla vacía", async () => {
+  // `guardar` devuelve si pudo escribir, y tragárselo es lo peor que se puede hacer aquí:
+  // la sesión no existiría en disco, `Sesion.tsx` no pinta nada sin ella, y el usuario se
+  // quedaría mirando una pantalla en blanco sin saber por qué.
+  vi.mocked(guardar).mockReturnValueOnce(false);
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "EMPEZAR EN BLANCO" }));
+
+  expect((await screen.findByRole("alert")).textContent).toContain("libera espacio");
+  expect(screen.queryByText("sesión")).toBe(null);
 });
 
 test("repetir el último copia los pesos y ninguna serie llega marcada", async () => {
@@ -3769,11 +3799,12 @@ Crear `web/src/pantallas/Elegir.tsx`:
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { diaDeHoy, entrenos, plantillas, type EntrenoSugerido, type Plantilla } from "../api";
+// `Modo` sale de borrador.ts, no de api.ts: api.ts lo importa de ahí y no lo reexporta.
 import {
-  diaDeHoy, entrenos, plantillas,
-  type EntrenoSugerido, type Modo, type Plantilla,
-} from "../api";
-import { ahoraUtc, descansoPorDefecto, guardar, type Ejercicio, type Serie, type Sesion } from "../borrador";
+  ahoraUtc, descansoPorDefecto, guardar,
+  type Ejercicio, type Modo, type Serie, type Sesion,
+} from "../borrador";
 import { Aviso, Boton, Comentario, Seccion, TituloPantalla } from "../componentes";
 
 function serieSemilla(): Serie {
@@ -3799,7 +3830,17 @@ export default function Elegir() {
   }, []);
 
   function empezar(sesion: Sesion) {
-    guardar(sesion);
+    // `guardar` devuelve si pudo escribir y aquí no se puede tragar. Sin la sesión en
+    // disco, la pantalla siguiente no tiene nada que pintar y se queda en blanco: el
+    // usuario creería que la aplicación se ha roto sin saber que lo que pasa es que no
+    // cabe. Se avisa y no se pasa de aquí.
+    if (!guardar(sesion)) {
+      setFallo(
+        "No hemos podido empezar el entreno porque no cabe en el móvil. " +
+          "Cierra alguna aplicación o libera espacio y vuelve a intentarlo.",
+      );
+      return;
+    }
     navegar("/entrenar/sesion");
   }
 
@@ -3870,7 +3911,9 @@ export default function Elegir() {
     });
   }
 
-  const delModo = lista.filter((p) => p.mode === modo);
+  // La sugerida se cae de la lista: ya tiene su propio botón arriba, y dos botones con el
+  // mismo nombre son dos botones idénticos para quien usa un lector de pantalla.
+  const delModo = lista.filter((p) => p.mode === modo && p.id !== sugerido?.template?.id);
 
   return (
     <>
@@ -3946,7 +3989,7 @@ export default function Elegir() {
 - [ ] **Paso 5 · Comprobar que pasa**
 
 Ejecutar: `cd web && npm test -- Elegir`
-Esperado: PASAN los 6.
+Esperado: PASAN los 8.
 
 - [ ] **Paso 6 · Commit**
 
