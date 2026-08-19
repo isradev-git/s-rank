@@ -4079,7 +4079,10 @@ test("las sugerencias del historial salen antes que el catálogo, y sin repetirs
   guardar({ ...EN_CURSO, exercises: [] });
   pintar();
 
-  const opciones = await screen.findAllByRole("option");
+  // El <datalist> lleva `hidden` de serie —no se pinta, lo despliega el navegador—, así
+  // que hay que pedirle a la consulta que mire también lo oculto. Sin eso no encuentra
+  // ninguna opción y el test falla con la pantalla ya correcta.
+  const opciones = await screen.findAllByRole("option", { hidden: true });
   expect(opciones.map((o) => o.getAttribute("value"))).toEqual([
     "Press banca",
     "Hip thrust",
@@ -4115,6 +4118,22 @@ test("si se dice que no, no se quita nada", async () => {
 
 Añadir `sugerenciasEjercicio: vi.fn().mockResolvedValue([])` y
 `catalogoEjercicios: vi.fn().mockResolvedValue([])` al `vi.mock("../api")`, e importarlos.
+
+Y volver a poner esos valores por defecto en el `beforeEach`, junto con los de
+`recordsPersonales`:
+
+```tsx
+  vi.mocked(recordsPersonales).mockResolvedValue([]);
+  vi.mocked(sugerenciasEjercicio).mockResolvedValue([]);
+  vi.mocked(catalogoEjercicios).mockResolvedValue([]);
+```
+
+`clearMocks` borra las llamadas, no las implementaciones: un `mockResolvedValue` puesto
+dentro de un test se queda puesto para todos los que vengan detrás. Ya pasaba antes de
+esta tarea —el `mockRejectedValue` de «sin conexión el aviso de récord simplemente no
+sale» lo heredaban los cinco tests siguientes— y no rompía nada de milagro, porque la
+llamada está dentro de un `catch`. Con dos mocks más y el orden de los tests decidiendo
+qué ve cada uno, deja de ser cuestión de suerte.
 
 - [ ] **Paso 2 · Comprobar que falla**
 
@@ -4240,7 +4259,7 @@ Y añadir `QUITAR EJERCICIO` a la barra de acciones.
 - [ ] **Paso 6 · Comprobar que pasa**
 
 Ejecutar: `cd web && npm test -- Sesion`
-Esperado: PASAN los 23.
+Esperado: PASAN los 24.
 
 - [ ] **Paso 7 · Commit**
 
