@@ -628,3 +628,12 @@ body {
 .pendientes .aviso {
   margin-top: 0;
 }
+
+/* Los enlaces que se pintan como botones: mismo aspecto, pero sin el subrayado que trae
+   un <a> y centrados como lo hace un <button> por su cuenta. */
+a.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
