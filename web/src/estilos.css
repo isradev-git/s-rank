@@ -539,3 +539,27 @@ body {
   color: var(--azul);
   font-size: var(--seccion);
 }
+
+.cifras {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}
+
+.cifras dt {
+  color: var(--apagado);
+  font-size: var(--etiqueta);
+  letter-spacing: 0.1em;
+}
+
+.cifras dd {
+  color: var(--texto);
+  font-size: var(--seccion);
+}
+
+.lista-records {
+  list-style: none;
+  margin-top: 0.75rem;
+  color: var(--rojo);
+  font-size: var(--cuerpo);
+}
