@@ -3132,6 +3132,15 @@ Ampliar los imports con `pendientes` de `../borrador`, `guardarEntreno` y `Error
 `../api`, añadir `guardarEntreno: vi.fn()` al `vi.mock("../api")`, y declarar la constante
 `SUBIDO` igual que en la tarea 4.
 
+⚠️ **Y añadir `clearMocks: true` al bloque `test` de `web/vite.config.ts`.** Es la primera
+tarea con un `navegar` compartido entre tests, y sin eso el último de todos —el que
+comprueba `expect(navegar).not.toHaveBeenCalled()`— falla con la pantalla ya correcta. El
+`restoreMocks: true` que hay puesto solo toca los espías de `vi.spyOn`: los `vi.fn()` que
+devuelve una factoría de `vi.mock` no los limpia nadie y acumulan llamadas de un test al
+siguiente. **`mockReset` no sirve**: borraría también implementaciones como el
+`vi.fn().mockResolvedValue([])` de `recordsPersonales`, que se declara una vez para todo
+el fichero, y rompería los tests de las tareas 9 y 10.
+
 - [ ] **Paso 2 · Comprobar que falla**
 
 Ejecutar: `cd web && npm test -- Sesion`
@@ -3284,7 +3293,10 @@ Ampliar los imports con `entregar`, `borrar` de `../borrador`, `duracionMinutos`
 
 ```tsx
 test("si no se puede ni subir ni guardar, el borrador NO se borra", async () => {
-  vi.mocked(entregar).mockResolvedValue(null);
+  // `...Once` y no `mockResolvedValue`: `clearMocks` borra las llamadas, no las
+  // implementaciones, y un `null` que se quedara puesto se comería al primer test que se
+  // añadiera detrás —la tarea 14 vuelve a esta pantalla— sin que se viera por qué.
+  vi.mocked(entregar).mockResolvedValueOnce(null);
   pintarEnSesion();
 
   fireEvent.click(screen.getByRole("button", { name: "TERMINAR" }));
@@ -3303,13 +3315,13 @@ test("si no se puede ni subir ni guardar, el borrador NO se borra", async () => 
 - [ ] **Paso 5 · Comprobar que pasa**
 
 Ejecutar: `cd web && npm test -- Sesion`
-Esperado: PASAN los 17.
+Esperado: PASAN los 18.
 
 - [ ] **Paso 6 · Commit**
 
 ```bash
 cd /mnt/c/Users/pc2/Documents/1_propio/f01
-git add web/src/pantallas/Sesion.tsx web/src/pantallas/Sesion.test.tsx
+git add web/vite.config.ts web/src/pantallas/Sesion.tsx web/src/pantallas/Sesion.test.tsx
 git commit -m "feat(entreno): cambiar de ejercicio y terminar la sesión
 
 Terminar es el único paso intermedio de todo el flujo y existe por dos
