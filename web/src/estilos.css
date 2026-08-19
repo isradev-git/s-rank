@@ -596,3 +596,21 @@ body {
 .anadir-ejercicio .campo {
   flex: 1;
 }
+
+.lista-plantillas .nombre-plantilla {
+  color: var(--texto);
+  font-size: var(--seccion);
+}
+
+.lista-ejercicios-plantilla {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.lista-ejercicios-plantilla li {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lineas);
+}

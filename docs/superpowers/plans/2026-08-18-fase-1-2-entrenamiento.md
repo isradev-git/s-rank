@@ -4416,8 +4416,10 @@ perder de vista:
 import { useEffect, useState } from "react";
 import {
   borrarPlantilla, crearPlantilla, editarPlantilla, plantillas,
-  ErrorApi, type Modo, type Plantilla, type PlantillaEditable,
+  ErrorApi, type Plantilla, type PlantillaEditable,
 } from "../api";
+// `Modo` sale de borrador.ts: api.ts lo importa de ahí y no lo reexporta.
+import type { Modo } from "../borrador";
 import { Aviso, Boton, Campo, Comentario, TituloPantalla } from "../componentes";
 
 type Borrador = { id: string | null; name: string; mode: Modo; exercises: { name: string; sets: string; reps: string }[] };
