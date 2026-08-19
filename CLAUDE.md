@@ -39,8 +39,8 @@ Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qu
 |---|---|
 | 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
 | 1.1 · Esqueleto web: navegación, diseño, login, PWA | **hecha**, en producción e instalada en el móvil |
-| 1.2 · Entrenamiento, con borrador sin conexión | **la siguiente** |
-| 1.3 · Nutrición, agua, suplementos, actividad | pendiente |
+| 1.2 · Entrenamiento, con borrador sin conexión | **hecha**, comprobada en el móvil |
+| 1.3 · Nutrición, agua, suplementos, actividad | **la siguiente** |
 | 1.4 · Progreso: historial, calendario, gráficas | pendiente |
 | 1.5 · Perfil, logros, administración | pendiente |
 
@@ -95,10 +95,12 @@ que es la herramienta que hace ese trabajo de verdad.
   web/               frontend React + TypeScript (Vite)
     src/
       api.ts             la única puerta a la API: peticiones y traducción de errores
+      borrador.ts        que no se pierda un entreno: localStorage, cola y subida
       componentes.tsx    los componentes del sistema de diseño, todos juntos
       formato.ts         los cálculos y textos con ramas — es lo que está probado
       estilos.css        los once colores y la escala tipográfica
       pantallas/         Login · Registro · Recuperar · Hoy
+                         Elegir · Sesion · Resumen · Plantillas
       App.tsx            rutas, pestañas y el portero de sesión
     public/          fuentes, iconos, manifiesto y el trabajador de servicio
   backend/           Laravel API-only, YA en producción
