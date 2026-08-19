@@ -4,7 +4,9 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router";
 import { ErrorApi, diaDeHoy, type DiaDeHoy, type Usuario } from "../api";
+import { guardar, leer, type Serie, type Sesion } from "../borrador";
 import Hoy from "./Hoy";
 
 vi.mock("../api", async (importOriginal) => ({
@@ -28,6 +30,12 @@ const DIA: DiaDeHoy = {
     { key: "train", label: "Entrenar", target: 3, progress: 1, xp_reward: 20, is_optional: false, completed: false },
     { key: "steps_8000", label: "8.000 pasos", target: 8000, progress: 5240, xp_reward: 15, is_optional: true, completed: false },
   ],
+  suggested_workout: {
+    reason: "Te faltan 2 entrenos para tu meta de esta semana.",
+    weekly_done: 1,
+    weekly_goal: 3,
+    template: null,
+  },
 };
 
 /** Lo que leería un lector de pantalla: el texto sin nada de lo marcado como dibujo.
@@ -38,15 +46,56 @@ function loQueSeLee(nodo: HTMLElement): string {
   return copia.textContent!.replace(/\s+/g, " ").trim();
 }
 
+/** La pantalla lleva enlaces desde la tarea 17 y un `<Link>` fuera de un router revienta. */
+const pintar = () =>
+  render(
+    <MemoryRouter>
+      <Hoy usuario={USUARIO} />
+    </MemoryRouter>,
+  );
+
+function serie(campos: Partial<Serie> = {}): Serie {
+  return {
+    weight_kg: null, reps: null, rpe: null,
+    distance_m: null, time_seconds: null, style: null,
+    rest_seconds: null, hecha: false,
+    ...campos,
+  };
+}
+
+/** Un borrador que empezó hace tantos minutos.
+ *
+ *  Relativo al reloj de verdad y no con `vi.setSystemTime`: los temporizadores falsos de
+ *  Vitest no los detecta Testing Library —solo conoce los de Jest—, así que dejaría
+ *  colgada cualquier espera de `findBy…`. Los cinco segundos de más evitan que el redondeo
+ *  a la baja de `textoAntiguedad` caiga en el minuto anterior. */
+function borradorDe(minutos: number): Sesion {
+  return {
+    v: 1,
+    mode: "gym",
+    nombre: "Torso pesado",
+    inicio: new Date(Date.now() - minutos * 60_000 - 5_000).toISOString(),
+    actual: 0,
+    exercises: [
+      {
+        name: "Press banca",
+        objetivo: null,
+        sets: [serie({ weight_kg: 80, reps: 5, hecha: true }), serie({ weight_kg: 80, reps: 5, hecha: true })],
+      },
+    ],
+  };
+}
+
 beforeEach(() => {
   vi.mocked(diaDeHoy).mockReset();
+  localStorage.clear();
 });
 
 test("sin conexión lo dice en español y deja volver a probar", async () => {
   vi.mocked(diaDeHoy).mockRejectedValue(
     new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
   );
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   const aviso = await screen.findByRole("alert");
   expect(aviso.textContent).toBe("No hay conexión. Comprueba el wifi o los datos.");
@@ -62,7 +111,7 @@ test("sin conexión lo dice en español y deja volver a probar", async () => {
 
 test("una misión hecha se oye con su estado, no con los corchetes", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   const hecha = (await screen.findByText("Beber 2 litros de agua")).closest("li")!;
   const pendiente = screen.getByText("Entrenar").closest("li")!;
@@ -80,7 +129,7 @@ test("una misión hecha se oye con su estado, no con los corchetes", async () =>
 
 test("el prompt del título no se lee", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   const titulo = await screen.findByRole("heading");
 
@@ -92,7 +141,7 @@ test("el prompt del título no se lee", async () => {
 
 test("la barra de XP se anuncia como un porcentaje, no como veinte caracteres", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   const barra = await screen.findByRole("progressbar");
 
@@ -103,7 +152,7 @@ test("la barra de XP se anuncia como un porcentaje, no como veinte caracteres", 
 
 test("las opcionales van aparte y no cuentan en el marcador", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   expect(await screen.findByText("si te sobra tiempo")).toBeTruthy();
 
@@ -114,9 +163,50 @@ test("las opcionales van aparte y no cuentan en el marcador", async () => {
 
 test("la fecha sale del servidor, no del reloj del navegador", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   // El 12 de agosto de 2026 fue miércoles. Leído y escrito en UTC, así que ninguna zona
   // horaria puede correrlo un día.
   expect(await screen.findByText(/miércoles, 12 de agosto/)).toBeTruthy();
+});
+
+test("un entreno a medias se ofrece con su antigüedad y lo que lleva", async () => {
+  guardar(borradorDe(12));
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+
+  expect(await screen.findByText(/Torso pesado/)).toBeTruthy();
+  expect(screen.getByText(/2 series/)).toBeTruthy();
+  expect(screen.getByText(/de hace 12 minutos/)).toBeTruthy();
+  expect(screen.getByRole("link", { name: "SEGUIR ENTRENANDO" })).toBeTruthy();
+});
+
+test("un borrador de anteayer se ofrece igual, no se tira solo", async () => {
+  guardar(borradorDe(2 * 24 * 60));
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+
+  // Que sea viejo no lo hace basura: puede ser justo el que hay que recuperar.
+  expect(await screen.findByText(/de hace 2 días/)).toBeTruthy();
+  expect(screen.getByRole("link", { name: "SEGUIR ENTRENANDO" })).toBeTruthy();
+});
+
+test("descartar el borrador pide confirmación", async () => {
+  guardar(borradorDe(12));
+  vi.spyOn(window, "confirm").mockReturnValue(false);
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "DESCARTAR" }));
+
+  // Es la única forma de perder un entreno a propósito, y tiene que costar dos pulsaciones.
+  expect(leer()).not.toBe(null);
+});
+
+test("sin borrador se ofrece empezar, con el motivo que manda el servidor", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+
+  expect(await screen.findByText("Te faltan 2 entrenos para tu meta de esta semana.")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "ENTRENAR" })).toBeTruthy();
 });

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router";
 import { ErrorApi, diaDeHoy, type DiaDeHoy, type Usuario } from "../api";
+import { borrar, leer } from "../borrador";
 import {
   BarraBloques,
   Boton,
@@ -9,7 +11,7 @@ import {
   Seccion,
   TituloPantalla,
 } from "../componentes";
-import { textoRacha } from "../formato";
+import { seriesHechas, textoAntiguedad, textoRacha } from "../formato";
 
 // `date` ya viene resuelto: el servidor decide en Europe/Madrid a qué día pertenecen las
 // misiones, y usar la zona del navegador diría «hoy» sobre un día distinto del que puntúa.
@@ -26,6 +28,17 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
   const [datos, setDatos] = useState<DiaDeHoy | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
+
+  // El borrador se lee una vez al montar. Si cambia, es porque el usuario está en la
+  // sesión, y al volver aquí la pantalla se monta otra vez.
+  const [borrador, setBorrador] = useState(() => leer());
+
+  function descartar() {
+    // La única forma de perder un entreno a propósito. Dos pulsaciones, a propósito.
+    if (!confirm("¿Descartar el entreno a medias? No se puede recuperar.")) return;
+    borrar();
+    setBorrador(null);
+  }
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -123,6 +136,36 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
                 <FilaMision key={mision.key} mision={mision} />
               ))}
             </ul>
+          </>
+        )}
+      </Seccion>
+
+      {/* Son `<Link>` y no botones con `navigate` porque son navegación: se pueden abrir en
+          otra pestaña, se ven al mantener pulsado y el navegador los trata como lo que son. */}
+      <Seccion titulo="Entreno de hoy" resumen={borrador ? "a medias" : "sin empezar"}>
+        {borrador ? (
+          <>
+            <Comentario>
+              {borrador.nombre} · {seriesHechas(borrador.exercises)} series ·{" "}
+              {textoAntiguedad(borrador.inicio)}
+            </Comentario>
+            <div className="acciones">
+              <Link className="boton compacto" to="/entrenar/sesion">
+                <span aria-hidden="true">[ </span>SEGUIR ENTRENANDO<span aria-hidden="true"> ]</span>
+              </Link>
+              <Boton type="button" compacto onClick={descartar}>
+                DESCARTAR
+              </Boton>
+            </div>
+          </>
+        ) : (
+          <>
+            <Comentario>{datos.suggested_workout.reason}</Comentario>
+            <div className="acciones">
+              <Link className="boton compacto" to="/entrenar">
+                <span aria-hidden="true">[ </span>ENTRENAR<span aria-hidden="true"> ]</span>
+              </Link>
+            </div>
           </>
         )}
       </Seccion>

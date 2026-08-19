@@ -6,6 +6,12 @@ que al terminar el Sistema te diga qué has ganado.
 Es el 40% de la aplicación y lo más complejo. También es lo único que funciona sin
 conexión.
 
+📐 **El diseño aprobado está en
+[2026-08-18-entrenamiento-design.md](../specs/2026-08-18-entrenamiento-design.md).** Manda
+él donde discrepe de este documento: el borrador va en `localStorage` y no en IndexedDB, y
+el historial de entrenos se mueve a la fase 1.4. El §7 del spec lista las cuatro
+desviaciones con su motivo.
+
 ## Qué existe cuando empieza
 
 De la **1.0**: la API completa, el Sistema calculando XP y récords en el servidor.
@@ -141,14 +147,42 @@ leer.
 
 ## Terminado cuando
 
-- [ ] Se puede completar un entreno entero en modo avión y se sube solo al recuperar red.
-- [ ] Matar la app a mitad de sesión no pierde nada.
-- [ ] Al guardar aparece la ventana del Sistema con el XP y los récords.
-- [ ] Un récord se anuncia en el momento.
-- [ ] El tercer entreno del día se guarda y se explica que no puntúa.
-- [ ] Las plantillas se crean, se editan y se usan.
-- [ ] El historial se ve, se filtra y se puede abrir un entreno.
-- [ ] Hay tests de las pantallas y del borrador: que sobrevive a recargar y a cerrar.
+- [x] Se puede completar un entreno entero en modo avión y se sube solo al recuperar red.
+- [x] Matar la app a mitad de sesión no pierde nada.
+- [x] Al guardar aparece la ventana del Sistema con el XP y los récords.
+- [x] Un récord se anuncia en el momento.
+- [x] El tercer entreno del día se guarda y se explica que no puntúa.
+- [x] Las plantillas se crean, se editan y se usan.
+- [ ] ~~El historial se ve, se filtra y se puede abrir un entreno.~~ **Movido a la 1.4**
+      por el §7 del spec: el historial vive de los datos que producen la 1.2 y la 1.3, y
+      partirlo en dos fases obligaba a escribir dos veces la misma pantalla.
+- [x] Hay tests de las pantallas y del borrador: que sobrevive a recargar y a cerrar.
+
+## Hecha · 19 de agosto de 2026
+
+**155 tests del frontend** y los 285 del backend en verde, `tsc -b`, `vite build` y
+`oxlint` limpios. Diecisiete tareas de código en
+[el plan](../plans/2026-08-18-fase-1-2-entrenamiento.md).
+
+**Comprobado en el móvil con la PWA instalada**, que es lo único que demuestra los dos
+criterios que de verdad importan: `jsdom` no tiene red que cortar ni proceso que matar, así
+que la suite en verde no decía nada de ellos. Un entreno entero en modo avión que sube solo
+al recuperar la conexión, y matar la aplicación a media sesión sin perder nada.
+
+### Lo que se desvió del plan
+
+Seis correcciones, escritas cada una en su commit `fix(plan 1.2)`. Dos que habrían dolido:
+
+- **El aviso de entrenos pendientes entraba en bucle infinito de peticiones.** El
+  `useCallback` de reintentar dependía de `subiendo` y el efecto dependía de él: cada
+  cambio de estado relanzaba el efecto mientras quedara algo en la cola.
+- **Los tests de la tarea 17 rompían los seis que ya había en `Hoy.test.tsx`.** Un `<Link>`
+  fuera de un router revienta al pintar, y `vi.setSystemTime` deja colgados los `findBy…`
+  porque Testing Library solo sabe detectar los temporizadores falsos de Jest.
+
+Las otras cuatro: `system.records` no tenía la forma que decía el plan, `entregar` no
+distinguía «encolado» de «no se pudo escribir», la ventana del Sistema decía ser modal sin
+serlo, y dos botones distintos se llamaban `REINTENTAR` en la misma pantalla.
 
 ## Prompt para arrancar el chat
 

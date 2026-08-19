@@ -382,3 +382,258 @@ body {
   font-size: var(--nota);
   margin-top: 1rem;
 }
+
+/* El cian es exclusivo de esta ventana. Si aparece en la interfaz normal, el momento de
+   recompensa se desactiva (spec §7). */
+.ventana-sistema {
+  position: relative;
+  margin: 1.5rem 0;
+  padding: 1.25rem 1rem;
+  border: 1px solid var(--cian);
+  background: var(--superficie);
+  box-shadow: 0 0 12px rgb(34 211 238 / 25%);
+}
+
+/* Las esquinas en ángulo del spec §7, con bordes y no con caracteres: así no hay nada que
+   un lector de pantalla pueda leer ni que se desalinee al cambiar el tamaño de fuente. */
+.ventana-sistema .angulo {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cian);
+}
+
+.ventana-sistema .angulo.superior {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.ventana-sistema .angulo.inferior {
+  right: -1px;
+  bottom: -1px;
+  border-top: none;
+  border-left: none;
+}
+
+.titulo-ventana {
+  color: var(--cian);
+  font-size: var(--etiqueta);
+  letter-spacing: 0.2em;
+  margin-bottom: 0.75rem;
+}
+
+.ventana-sistema .motivos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ventana-sistema .motivos li {
+  color: var(--texto);
+  font-size: var(--seccion);
+}
+
+.aviso.ambar {
+  color: var(--ambar);
+}
+
+.boton.compacto {
+  width: auto;
+  margin-top: 0;
+  padding: 0 0.75rem;
+}
+
+/* ── Fila de serie ────────────────────────────────────────────────────────── */
+
+.tabla-series {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.tabla-series th {
+  color: var(--apagado);
+  font-size: var(--etiqueta);
+  font-weight: normal;
+  letter-spacing: 0.1em;
+  text-align: left;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--lineas);
+}
+
+.fila-serie td {
+  padding: 0.25rem 0.2rem;
+  border-bottom: 1px solid var(--lineas);
+}
+
+.fila-serie .numero,
+.fila-serie .anterior {
+  color: var(--apagado);
+  font-size: var(--nota);
+  white-space: nowrap;
+}
+
+.fila-serie input {
+  width: 100%;
+  min-width: 3.5ch;
+  min-height: 48px;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--lineas);
+  font-family: inherit;
+  font-size: var(--cuerpo);
+  text-align: center;
+}
+
+.fila-serie input:focus {
+  outline: none;
+  border-color: var(--ambar);
+}
+
+.marca-serie {
+  min-width: 48px;
+  min-height: 48px;
+  background: transparent;
+  border: none;
+  color: var(--apagado);
+  font-family: inherit;
+  font-size: var(--seccion);
+  cursor: pointer;
+}
+
+.fila-serie.hecha .marca-serie {
+  color: var(--verde);
+}
+
+.marca-serie:focus-visible {
+  outline: 2px solid var(--ambar);
+  outline-offset: -2px;
+}
+
+/* ── Sesión ───────────────────────────────────────────────────────────────── */
+
+.nombre-ejercicio {
+  font-size: var(--titulo);
+  color: var(--texto);
+  margin-top: 1.25rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.descanso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--azul);
+  color: var(--azul);
+  font-size: var(--seccion);
+}
+
+.cifras {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}
+
+.cifras dt {
+  color: var(--apagado);
+  font-size: var(--etiqueta);
+  letter-spacing: 0.1em;
+}
+
+.cifras dd {
+  color: var(--texto);
+  font-size: var(--seccion);
+}
+
+.lista-records {
+  list-style: none;
+  margin-top: 0.75rem;
+  color: var(--rojo);
+  font-size: var(--cuerpo);
+}
+
+.modos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modos .boton[aria-pressed="true"] {
+  background: var(--ambar);
+  color: var(--fondo);
+}
+
+.lista-plantillas {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.anadir-ejercicio {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lineas);
+}
+
+.anadir-ejercicio .campo {
+  flex: 1;
+}
+
+.lista-plantillas .nombre-plantilla {
+  color: var(--texto);
+  font-size: var(--seccion);
+}
+
+.lista-ejercicios-plantilla {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.lista-ejercicios-plantilla li {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lineas);
+}
+
+/* El aviso de entrenos sin subir, encima de las pestañas: el texto a la izquierda y el
+   botón de subirlos a la derecha, en la misma línea. */
+.pendientes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.pendientes .aviso {
+  margin-top: 0;
+}
+
+/* Los enlaces que se pintan como botones: mismo aspecto, pero sin el subrayado que trae
+   un <a> y centrados como lo hace un <button> por su cuenta. */
+a.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}

@@ -3,9 +3,11 @@
    Y la decoración —el `$`, los `[✓]`, las flechas— va marcada aria-hidden para que
    el lector de pantalla no la lea. Spec §5.1. */
 
+import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import type { Mision } from "./api";
-import { BLOQUES, bloquesEncendidos } from "./formato";
+import type { BloqueSistema, Mision, SerieAnterior } from "./api";
+import type { Modo, Serie } from "./borrador";
+import { BLOQUES, bloquesEncendidos, textoRecord } from "./formato";
 
 // A diferencia del NumberFormat de Java, Intl.NumberFormat sí se puede compartir:
 // no guarda estado entre llamadas, y construirlo cada vez es caro.
@@ -150,12 +152,21 @@ export function Seccion({
 
 export function Boton({
   children,
+  compacto = false,
   ...resto
-}: { children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: {
+  children: ReactNode;
+  /** Para las barras de acciones, donde caben varios en una fila. */
+  compacto?: boolean;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   // Los corchetes van aria-hidden o el nombre accesible del botón pasa a ser
   // «corchete ENTRAR corchete». Son dibujo, como todo lo demás.
+  //
+  // El spread va detrás de className a propósito: una className que llegara por fuera
+  // machacaría la clase «boton» entera en vez de sumarse. Por eso la variante compacta
+  // es una propiedad y no una clase que alguien pase desde fuera.
   return (
-    <button className="boton" {...resto}>
+    <button className={compacto ? "boton compacto" : "boton"} {...resto}>
       <span aria-hidden="true">[ </span>
       {children}
       <span aria-hidden="true"> ]</span>
@@ -183,5 +194,195 @@ export function Campo({
         </span>
       )}
     </label>
+  );
+}
+
+/** Un aviso con dos urgencias.
+ *
+ *  `rojo` es una pérdida de datos en curso y va como `alert`: el lector de pantalla
+ *  interrumpe lo que esté diciendo. `ambar` es informativo y va como `status`, que espera
+ *  al turno. Usar `alert` para todo enseña a ignorarlo. */
+export function Aviso({
+  tono,
+  children,
+}: {
+  tono: "rojo" | "ambar";
+  children: ReactNode;
+}) {
+  return (
+    <p className={`aviso ${tono}`} role={tono === "rojo" ? "alert" : "status"}>
+      {children}
+    </p>
+  );
+}
+
+/** La ventana del Sistema. Spec §6.7: aparece sola y en exactamente cuatro momentos
+ *  —subir de nivel, subir de rango, desbloquear un logro y batir un récord—. Si saltara
+ *  por cualquier otra cosa dejaría de significar algo, y el cian dejaría de ser un premio.
+ *
+ *  Ganar XP a secas **no** la abre: pasa en todos los entrenos. */
+export function VentanaSistema({
+  sistema,
+  alCerrar,
+}: {
+  sistema: BloqueSistema;
+  alCerrar: () => void;
+}) {
+  const ventana = useRef<HTMLDivElement>(null);
+
+  // Una ventana que se declara `aria-modal` tiene que cumplirlo. Sin esto, quien navega
+  // con teclado se queda con el foco detrás de ella y tiene que tabular a ciegas hasta
+  // tropezar con CERRAR, y quien usa lector de pantalla no oye que se haya abierto nada:
+  // la única recompensa de toda la aplicación pasaría muda.
+  //
+  // No se usa `<dialog>` con `showModal()`, que haría todo esto solo, porque jsdom no lo
+  // implementa y dejaría este comportamiento sin ningún test. Se revisa si algún día lo
+  // implementa: sería borrar este efecto entero.
+  useEffect(() => {
+    if (!ventana.current) return;
+    const anterior = document.activeElement as HTMLElement | null;
+    ventana.current.querySelector<HTMLElement>("button")?.focus();
+    return () => anterior?.focus();
+  }, []);
+
+  const motivos = [
+    sistema.level_up && `Nivel ${sistema.level_up.to}`,
+    sistema.rank_up && `Rango ${sistema.rank_up.to}`,
+    ...sistema.achievements_unlocked.map((logro) => logro.name),
+    ...sistema.records.map(textoRecord),
+  ].filter((texto): texto is string => !!texto);
+
+  if (motivos.length === 0) return null;
+
+  return (
+    <div
+      ref={ventana}
+      className="ventana-sistema"
+      role="dialog"
+      aria-modal="true"
+      aria-label="El Sistema"
+      onKeyDown={(evento) => {
+        if (evento.key === "Escape") alCerrar();
+        // Dentro solo hay un botón, así que tabular solo puede sacar de una ventana que
+        // dice ser modal. El foco se queda aquí hasta que se cierre.
+        if (evento.key === "Tab") evento.preventDefault();
+      }}
+    >
+      {/* Las esquinas en ángulo son dibujo de terminal, como los corchetes. */}
+      <span className="angulo superior" aria-hidden="true" />
+
+      <p className="titulo-ventana">EL SISTEMA</p>
+      <ul className="motivos">
+        {motivos.map((texto) => (
+          <li key={texto}>{texto}</li>
+        ))}
+      </ul>
+
+      <span className="angulo inferior" aria-hidden="true" />
+
+      <Boton type="button" onClick={alCerrar}>
+        CERRAR
+      </Boton>
+    </div>
+  );
+}
+
+/** Un número que puede no estar. Vaciar el campo devuelve null y no 0: un cero es un dato
+ *  —«he levantado 0 kg»— y no haberlo apuntado es otra cosa. De esa diferencia depende que
+ *  la serie se considere vacía y no se mande. */
+function aNumero(texto: string): number | null {
+  if (texto.trim() === "") return null;
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Una fila de la tabla de series. Se usa de pie, con una mano, con la pantalla sudada y
+ *  con prisa entre series: los objetivos táctiles son de 48 px y no hay ningún gesto, solo
+ *  pulsar y teclear. Fuerza pide kilos, repeticiones y esfuerzo; natación pide distancia,
+ *  tiempo y estilo, no kilos. */
+export function FilaSerie({
+  numero,
+  serie,
+  modo,
+  anterior,
+  alCambiar,
+  alMarcar,
+}: {
+  numero: number;
+  serie: Serie;
+  modo: Modo;
+  /** Lo que se apuntó la última vez en esta misma serie, si se sabe. */
+  anterior: SerieAnterior | null;
+  alCambiar: (campo: keyof Serie, valor: number | string | null) => void;
+  alMarcar: () => void;
+}) {
+  // En calistenia el peso es el lastre que se cuelga, no el del cuerpo.
+  const etiquetaPeso = modo === "calisthenics" ? "Lastre" : "Peso";
+
+  const numerico = (
+    campo: keyof Serie,
+    etiqueta: string,
+    paso: "0.5" | "1",
+  ) => (
+    <td>
+      <input
+        type="number"
+        step={paso}
+        min="0"
+        // El teclado numérico del móvil sale solo. Decimal donde hay medios kilos y
+        // medios metros; entero donde no tiene sentido una coma.
+        inputMode={paso === "0.5" ? "decimal" : "numeric"}
+        aria-label={`${etiqueta}, serie ${numero}`}
+        value={(serie[campo] as number | null) ?? ""}
+        onChange={(e) => alCambiar(campo, aNumero(e.target.value))}
+      />
+    </td>
+  );
+
+  return (
+    <tr className={serie.hecha ? "fila-serie hecha" : "fila-serie"}>
+      <td className="numero" aria-hidden="true">
+        {numero}
+      </td>
+
+      {modo === "swimming" ? (
+        <>
+          {numerico("distance_m", "Distancia en metros", "0.5")}
+          {numerico("time_seconds", "Tiempo en segundos", "1")}
+          <td>
+            <input
+              type="text"
+              aria-label={`Estilo, serie ${numero}`}
+              value={serie.style ?? ""}
+              onChange={(e) => alCambiar("style", e.target.value || null)}
+            />
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="anterior" aria-hidden="true">
+            {anterior?.weight_kg != null && anterior.reps != null
+              ? `${anterior.weight_kg}×${anterior.reps}`
+              : ""}
+          </td>
+          {numerico("weight_kg", `${etiquetaPeso} en kilos`, "0.5")}
+          {numerico("reps", "Repeticiones", "1")}
+          {numerico("rpe", "Esfuerzo del 1 al 10", "1")}
+        </>
+      )}
+
+      <td>
+        <button
+          type="button"
+          className="marca-serie"
+          // El `[✓]` es dibujo: lo que se oye es el estado, con estas palabras.
+          aria-label={`Serie ${numero}, ${serie.hecha ? "hecha" : "pendiente"}`}
+          aria-pressed={serie.hecha}
+          onClick={alMarcar}
+        >
+          <span aria-hidden="true">[{serie.hecha ? "✓" : " "}]</span>
+        </button>
+      </td>
+    </tr>
   );
 }
