@@ -4770,21 +4770,66 @@ llamada más."
 
 Añadir al final de `web/src/pantallas/Hoy.test.tsx`:
 
+⚠️ **Antes, dos cosas que afectan a los seis tests que ya hay en el fichero.**
+
+**Un `<Link>` fuera de un router revienta.** La pantalla pasa a llevar enlaces, así que
+todas las llamadas a `render` de este fichero tienen que envolverla:
+
+```tsx
+import { MemoryRouter } from "react-router";
+
+const pintar = () =>
+  render(
+    <MemoryRouter>
+      <Hoy usuario={USUARIO} />
+    </MemoryRouter>,
+  );
+```
+
+Y sustituir los seis `render(<Hoy usuario={USUARIO} />)` por `pintar()`.
+
+**Y la antigüedad no se prueba con `vi.setSystemTime`.** Testing Library solo sabe detectar
+los temporizadores falsos de Jest; con los de Vitest puestos, cualquier `findBy…` se queda
+esperando un reloj que nadie adelanta y el test agota su tiempo. Como `textoAntiguedad`
+lee `Date.now()`, basta con fechar el borrador hacia atrás desde el reloj de verdad:
+
+```tsx
+function serie(campos: Partial<Serie> = {}): Serie {
+  return {
+    weight_kg: null, reps: null, rpe: null,
+    distance_m: null, time_seconds: null, style: null,
+    rest_seconds: null, hecha: false,
+    ...campos,
+  };
+}
+
+/** Un borrador que empezó hace tantos minutos. Los cinco segundos de más evitan que el
+ *  redondeo a la baja de `textoAntiguedad` caiga en el minuto anterior. */
+function borradorDe(minutos: number): Sesion {
+  return {
+    v: 1,
+    mode: "gym",
+    nombre: "Torso pesado",
+    inicio: new Date(Date.now() - minutos * 60_000 - 5_000).toISOString(),
+    actual: 0,
+    exercises: [
+      {
+        name: "Press banca",
+        objetivo: null,
+        sets: [serie({ weight_kg: 80, reps: 5, hecha: true }), serie({ weight_kg: 80, reps: 5, hecha: true })],
+      },
+    ],
+  };
+}
+```
+
+Los cuatro tests, al final del fichero:
+
 ```tsx
 test("un entreno a medias se ofrece con su antigüedad y lo que lleva", async () => {
-  vi.setSystemTime(new Date("2026-08-18T17:12:00Z"));
-  guardar({
-    v: 1, mode: "gym", nombre: "Torso pesado", inicio: "2026-08-18T17:00:00Z", actual: 0,
-    exercises: [{
-      name: "Press banca", objetivo: null,
-      sets: [
-        { weight_kg: 80, reps: 5, rpe: null, distance_m: null, time_seconds: null, style: null, rest_seconds: 90, hecha: true },
-        { weight_kg: 80, reps: 5, rpe: null, distance_m: null, time_seconds: null, style: null, rest_seconds: 90, hecha: true },
-      ],
-    }],
-  });
+  guardar(borradorDe(12));
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   expect(await screen.findByText(/Torso pesado/)).toBeTruthy();
   expect(screen.getByText(/2 series/)).toBeTruthy();
@@ -4793,21 +4838,20 @@ test("un entreno a medias se ofrece con su antigüedad y lo que lleva", async ()
 });
 
 test("un borrador de anteayer se ofrece igual, no se tira solo", async () => {
-  vi.setSystemTime(new Date("2026-08-20T10:00:00Z"));
-  guardar({ /* …el mismo, inicio 2026-08-18T17:00:00Z… */ } as never);
+  guardar(borradorDe(2 * 24 * 60));
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   // Que sea viejo no lo hace basura: puede ser justo el que hay que recuperar.
-  expect(await screen.findByText(/de hace 1 día|de ayer|de hace 2 días/)).toBeTruthy();
+  expect(await screen.findByText(/de hace 2 días/)).toBeTruthy();
   expect(screen.getByRole("link", { name: "SEGUIR ENTRENANDO" })).toBeTruthy();
 });
 
 test("descartar el borrador pide confirmación", async () => {
-  guardar({ /* …uno cualquiera… */ } as never);
+  guardar(borradorDe(12));
   vi.spyOn(window, "confirm").mockReturnValue(false);
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   fireEvent.click(await screen.findByRole("button", { name: "DESCARTAR" }));
 
@@ -4817,14 +4861,16 @@ test("descartar el borrador pide confirmación", async () => {
 
 test("sin borrador se ofrece empezar, con el motivo que manda el servidor", async () => {
   vi.mocked(diaDeHoy).mockResolvedValue(DIA);
-  render(<Hoy usuario={USUARIO} />);
+  pintar();
 
   expect(await screen.findByText("Te faltan 2 entrenos para tu meta de esta semana.")).toBeTruthy();
   expect(screen.getByRole("link", { name: "ENTRENAR" })).toBeTruthy();
 });
 ```
 
-Ampliar los imports con `guardar`, `leer` de `../borrador` y `fireEvent`.
+Ampliar los imports con `guardar`, `leer`, `type Serie` y `type Sesion` de `../borrador`.
+Y el `beforeEach` con `localStorage.clear()`: el borrador sobrevive de un test al
+siguiente y el de «sin borrador» encontraría el que dejó puesto el anterior.
 
 - [ ] **Paso 2 · Comprobar que falla**
 
