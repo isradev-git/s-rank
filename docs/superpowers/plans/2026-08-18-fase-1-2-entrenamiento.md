@@ -3362,7 +3362,7 @@ a quién preguntar."
 Crear `web/src/pantallas/Resumen.test.tsx`:
 
 ```tsx
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { expect, test } from "vitest";
 import type { BloqueSistema, EntrenoGuardado } from "../api";
@@ -3404,7 +3404,8 @@ test("sin conexión se dice que se subirá solo, y no se inventa ningún XP", ()
   // el hueco sería reimplementar el cálculo en el cliente.
   pintar({ ...BASE, guardado: null });
 
-  expect(screen.getByRole("status").textContent).toContain("se subirá solo");
+  // Sin el «se»: la frase del aviso empieza ahí y la ese va en mayúscula.
+  expect(screen.getByRole("status").textContent).toContain("Se subirá solo");
   expect(document.body.textContent).not.toContain("XP");
 });
 
@@ -3432,7 +3433,29 @@ test("un récord abre la ventana del Sistema", () => {
     } as unknown as EntrenoGuardado,
   });
 
-  expect(screen.getByRole("dialog")).toBeTruthy();
+  // Dentro de la ventana, no en la pantalla entera: el récord sale dos veces a propósito
+  // —en la ventana, que es el premio, y en la lista, que es lo que queda cuando se cierra—
+  // así que buscarlo suelto encontraría dos y no demostraría que la ventana lo lleva.
+  const ventana = screen.getByRole("dialog");
+  expect(within(ventana).getByText("Press banca: 85 kg, antes 80 kg.")).toBeTruthy();
+});
+
+test("al cerrar la ventana el récord sigue en la pantalla", () => {
+  // La ventana se cierra de un botón y no vuelve. Si el récord viviera solo dentro de
+  // ella, cerrarla lo borraría de la única pantalla que lo cuenta.
+  pintar({
+    ...BASE,
+    guardado: {
+      new_records: [],
+      system: sistema({
+        records: [{ exercise: "Press banca", kind: "weight", value: 85, previous: 80 }],
+      }),
+    } as unknown as EntrenoGuardado,
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "CERRAR" }));
+
+  expect(screen.queryByRole("dialog")).toBe(null);
   expect(screen.getByText("Press banca: 85 kg, antes 80 kg.")).toBeTruthy();
 });
 
@@ -3568,7 +3591,7 @@ export default function Resumen() {
 - [ ] **Paso 5 · Comprobar que pasa**
 
 Ejecutar: `cd web && npm test -- Resumen`
-Esperado: PASAN los 5.
+Esperado: PASAN los 6.
 
 - [ ] **Paso 6 · Commit**
 
