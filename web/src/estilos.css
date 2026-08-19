@@ -563,3 +563,23 @@ body {
   color: var(--rojo);
   font-size: var(--cuerpo);
 }
+
+.modos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modos .boton[aria-pressed="true"] {
+  background: var(--ambar);
+  color: var(--fondo);
+}
+
+.lista-plantillas {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
