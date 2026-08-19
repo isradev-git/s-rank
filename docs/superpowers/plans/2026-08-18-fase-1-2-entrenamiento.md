@@ -4533,8 +4533,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { BrowserRouter } from "react-router";
 import App from "./App";
-import { encolar, type Sesion } from "./borrador";
-import { subirPendientes, usuarioActual } from "./api";
+import { encolar, subirPendientes, type Sesion } from "./borrador";
+import { usuarioActual } from "./api";
 
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
@@ -4576,10 +4576,14 @@ test("al recuperar la conexión se reintenta solo", async () => {
   encolar(PENDIENTE);
   pintar();
   await screen.findByRole("status");
+  // Al abrir la aplicación ya se ha intentado una vez. Si esto solo comprobara
+  // `toHaveBeenCalled()`, pasaría sin escuchar nada y el reintento automático podría no
+  // existir: hay que contar las llamadas para que el test hable del oyente y no del montaje.
+  expect(subirPendientes).toHaveBeenCalledTimes(1);
 
   window.dispatchEvent(new Event("online"));
 
-  await vi.waitFor(() => expect(subirPendientes).toHaveBeenCalled());
+  await vi.waitFor(() => expect(subirPendientes).toHaveBeenCalledTimes(2));
 });
 
 test("si al reintentar el entreno traía un récord, sale su ventana del Sistema", async () => {
@@ -4596,7 +4600,7 @@ test("si al reintentar el entreno traía un récord, sale su ventana del Sistema
   ]);
   pintar();
 
-  fireEvent.click(await screen.findByRole("button", { name: "REINTENTAR" }));
+  fireEvent.click(await screen.findByRole("button", { name: "SUBIR AHORA" }));
 
   expect(await screen.findByRole("dialog")).toBeTruthy();
   expect(screen.getByText("Nivel 5")).toBeTruthy();
@@ -4625,7 +4629,7 @@ function AvisoPendientes() {
   const [subiendo, setSubiendo] = useState(false);
 
   const reintentar = useCallback(async () => {
-    if (subiendo || pendientes().length === 0) return;
+    if (pendientes().length === 0) return;
     setSubiendo(true);
     const subidos = await subirPendientes();
     // Si algo de lo que subió solo traía nivel, rango, logro o récord, se celebra igual
@@ -4636,13 +4640,14 @@ function AvisoPendientes() {
     if (conPremio) setPremio(conPremio.system);
     setCuantos(pendientes().length);
     setSubiendo(false);
-  }, [subiendo]);
+  }, []);
 
   useEffect(() => {
+    const alVolverLaRed = () => void reintentar();
     void reintentar();
-    window.addEventListener("online", () => void reintentar());
-    return () => window.removeEventListener("online", () => void reintentar());
-  }, []);
+    window.addEventListener("online", alVolverLaRed);
+    return () => window.removeEventListener("online", alVolverLaRed);
+  }, [reintentar]);
 
   if (cuantos === 0 && !premio) return null;
 
@@ -4653,8 +4658,11 @@ function AvisoPendientes() {
           <Aviso tono="ambar">
             {cuantos === 1 ? "1 entreno pendiente de subir" : `${cuantos} entrenos pendientes de subir`}
           </Aviso>
+          {/* «SUBIR AHORA» y no «REINTENTAR»: sin conexión, «hoy» ya enseña su propio
+              REINTENTAR y quedarían dos botones con el mismo nombre en la misma pantalla,
+              que para quien navega con lector no se distinguen. Este dice lo que hace. */}
           <Boton type="button" compacto disabled={subiendo} onClick={() => void reintentar()}>
-            {subiendo ? "SUBIENDO…" : "REINTENTAR"}
+            {subiendo ? "SUBIENDO…" : "SUBIR AHORA"}
           </Boton>
         </div>
       )}
@@ -4664,17 +4672,19 @@ function AvisoPendientes() {
 }
 ```
 
-⚠️ **El `removeEventListener` de arriba no quita nada**: `() => void reintentar()` crea una
-función distinta cada vez. Guardar la referencia:
+Dos detalles del efecto, y los dos importan:
 
-```tsx
-  useEffect(() => {
-    const alVolverLaRed = () => void reintentar();
-    void reintentar();
-    window.addEventListener("online", alVolverLaRed);
-    return () => window.removeEventListener("online", alVolverLaRed);
-  }, [reintentar]);
-```
+**La referencia del oyente se guarda.** `window.removeEventListener("online", () => void
+reintentar())` no quita nada: esa flecha crea una función distinta cada vez y la limpieza
+intentaría quitar una que nunca se registró.
+
+**Y `reintentar` no puede depender de `subiendo`.** El efecto lo tiene como dependencia,
+así que una función que cambiara con el estado volvería a lanzar el efecto en cada cambio
+—empieza a subir, termina, se vuelve a lanzar, empieza a subir— y no pararía nunca: una
+petición detrás de otra mientras quede algo en la cola. Por eso el `useCallback` va con
+`[]` y sin la guarda `if (subiendo)`. La guarda de verdad ya está dentro de
+`subirPendientes`, que es donde tiene que estar: allí protege también de los dos
+disparadores que coinciden.
 
 - [ ] **Paso 4 · Montar las rutas**
 
@@ -4732,6 +4742,11 @@ entrenar.
 Se reintenta al abrir la aplicación, al recuperar la conexión y con el
 botón. Sin retroceso exponencial: al otro lado hay un hosting compartido con
 un usuario, no un servicio que haya que proteger de una estampida.
+
+El botón dice SUBIR AHORA y no REINTENTAR porque «hoy» ya tiene un
+REINTENTAR para su propia carga, y sin conexión salen los dos a la vez: dos
+botones con el mismo nombre en la misma pantalla no se distinguen con un
+lector de pantalla.
 
 Y si algo de lo que sube solo traía nivel, rango, logro o récord, se celebra
 igual que si se hubiera subido en el momento. Es el mismo componente y una
