@@ -11,6 +11,7 @@ import {
 import { pendientes, subirPendientes } from "./borrador";
 import { Aviso, Boton, Comentario, TituloPantalla, VentanaSistema } from "./componentes";
 import AnadirComida from "./pantallas/AnadirComida";
+import CrearAlimento from "./pantallas/CrearAlimento";
 import Elegir from "./pantallas/Elegir";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
@@ -196,6 +197,7 @@ export default function App() {
         <Route path="/plantillas" element={<Plantillas />} />
         <Route path="/nutricion" element={<Nutricion />} />
         <Route path="/nutricion/anadir" element={<AnadirComida />} />
+        <Route path="/nutricion/alimento/nuevo" element={<CrearAlimento />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
