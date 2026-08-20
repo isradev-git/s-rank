@@ -7,10 +7,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  ErrorApi, agua, anadirAgua, marcarSuplemento, suplementos,
+  ErrorApi, actividad, agua, anadirAgua, guardarActividad, guardarPeso,
+  marcarSuplemento, suplementos,
   type BloqueSistema, type ClaveSuplemento, type DiaDeAgua, type Suplemento,
 } from "../api";
-import { BarraBloques, Boton, Casilla, Comentario, Seccion } from "../componentes";
+import { BarraBloques, Boton, Campo, Casilla, Comentario, Seccion } from "../componentes";
 import { textoAgua } from "../formato";
 
 /** Un vaso. FitLoop ya usaba 250 ml y es lo que cabe en un vaso normal. */
@@ -136,6 +137,118 @@ export function SeccionSuplementos({
           </li>
         ))}
       </ul>
+    </Seccion>
+  );
+}
+
+const aNumero = (texto: string, porDefecto = 0) => {
+  const n = Number(texto);
+  return Number.isFinite(n) && n >= 0 ? n : porDefecto;
+};
+
+export function SeccionActividad({
+  fecha,
+  alGanar,
+}: {
+  fecha: string;
+  alGanar: (sistema: BloqueSistema) => void;
+}) {
+  const [pasos, setPasos] = useState("");
+  const [calorias, setCalorias] = useState("");
+  const [guardado, setGuardado] = useState<number | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  useEffect(() => {
+    actividad(fecha)
+      .then((a) => {
+        setGuardado(a.steps);
+        if (a.steps > 0) setPasos(String(a.steps));
+        if (a.calories_burned > 0) setCalorias(String(a.calories_burned));
+      })
+      .catch(() => setFallo("No hemos podido cargar la actividad de hoy."));
+  }, [fecha]);
+
+  async function guardar() {
+    setGuardando(true);
+    setFallo(null);
+    try {
+      // ⚠️ El servidor exige las dos cifras, pero mucha gente solo conoce sus pasos. Las
+      // calorías vacías van a 0. NO se estiman a partir de los pasos: sería un número
+      // inventado presentado como dato de salud.
+      const r = await guardarActividad(fecha, aNumero(pasos), aNumero(calorias));
+      setGuardado(r.steps);
+      if (r.system) alGanar(r.system);
+    } catch (error) {
+      setFallo(
+        error instanceof ErrorApi && error.fallo.general
+          ? error.fallo.general
+          : "No se ha podido guardar. Inténtalo otra vez.",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Seccion
+      titulo="Actividad"
+      resumen={guardado && guardado > 0 ? `${guardado} pasos` : "sin apuntar"}
+    >
+      {fallo && <p className="aviso" role="alert">{fallo}</p>}
+
+      <Campo etiqueta="Pasos" name="pasos" type="number" inputMode="numeric" min="0"
+             max="150000" value={pasos} onChange={(e) => setPasos(e.target.value)} />
+      <Campo etiqueta="Calorías quemadas, si tu reloj te las da" name="calorias"
+             type="number" inputMode="numeric" min="0" max="10000" value={calorias}
+             onChange={(e) => setCalorias(e.target.value)} />
+
+      <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
+        {guardando ? "GUARDANDO…" : "GUARDAR"}
+      </Boton>
+    </Seccion>
+  );
+}
+
+export function SeccionPeso({
+  pesoActual,
+  alGanar,
+}: {
+  pesoActual: number | null;
+  alGanar: (sistema: BloqueSistema) => void;
+}) {
+  const [kilos, setKilos] = useState(pesoActual == null ? "" : String(pesoActual));
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  async function guardar() {
+    setGuardando(true);
+    setFallo(null);
+    try {
+      const r = await guardarPeso(aNumero(kilos));
+      // ⚠️ `system` llega a null cuando el peso no cambió. No hay nada que anunciar.
+      if (r.system) alGanar(r.system);
+    } catch (error) {
+      setFallo(
+        error instanceof ErrorApi && error.fallo.general
+          ? error.fallo.general
+          : "No se ha podido guardar. Inténtalo otra vez.",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Seccion titulo="Peso" resumen={pesoActual == null ? "sin apuntar" : `${pesoActual} kg`}>
+      {fallo && <p className="aviso" role="alert">{fallo}</p>}
+
+      <Campo etiqueta="Peso en kilos" name="peso" type="number" inputMode="decimal"
+             step="0.1" min="0" value={kilos} onChange={(e) => setKilos(e.target.value)} />
+
+      <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
+        {guardando ? "GUARDANDO…" : "GUARDAR"}
+      </Boton>
     </Seccion>
   );
 }

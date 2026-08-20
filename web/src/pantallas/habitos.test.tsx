@@ -12,6 +12,9 @@ vi.mock("../api", async (importOriginal) => ({
   anadirAgua: vi.fn(),
   suplementos: vi.fn(),
   marcarSuplemento: vi.fn(),
+  actividad: vi.fn(),
+  guardarActividad: vi.fn(),
+  guardarPeso: vi.fn(),
 }));
 
 const pintar = (alGanar = () => {}) =>
@@ -133,4 +136,53 @@ test("el recuento se mueve con la casilla", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Omega 3, sin tomar" }));
 
   expect(await screen.findByText("2 de 4")).toBeTruthy();
+});
+
+import { actividad, guardarActividad, guardarPeso } from "../api";
+import { SeccionActividad, SeccionPeso } from "./habitos";
+
+test("los pasos se guardan y las calorías, si no se saben, van a cero", async () => {
+  vi.mocked(actividad).mockResolvedValue({ date: "2026-08-20", steps: 0, calories_burned: 0 });
+  vi.mocked(guardarActividad).mockResolvedValue({
+    date: "2026-08-20", steps: 8200, calories_burned: 0, system: null,
+  });
+  render(<SeccionActividad fecha="2026-08-20" alGanar={() => {}} />);
+
+  fireEvent.change(await screen.findByLabelText("Pasos"), { target: { value: "8200" } });
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  // El servidor exige las dos cifras. Mucha gente solo conoce sus pasos, y estimar las
+  // calorías sería inventarse un dato de salud.
+  expect(vi.mocked(guardarActividad)).toHaveBeenCalledWith("2026-08-20", 8200, 0);
+});
+
+test("las calorías se dicen opcionales y de dónde salen", async () => {
+  vi.mocked(actividad).mockResolvedValue({ date: "2026-08-20", steps: 0, calories_burned: 0 });
+  render(<SeccionActividad fecha="2026-08-20" alGanar={() => {}} />);
+
+  expect(await screen.findByLabelText("Calorías quemadas, si tu reloj te las da")).toBeTruthy();
+});
+
+test("apuntar el peso lo manda en kilos y sube el bloque system", async () => {
+  const ganados: unknown[] = [];
+  const bloque = { quests_completed: ["weight"] };
+  vi.mocked(guardarPeso).mockResolvedValue({ user: {} as never, system: bloque as never });
+  render(<SeccionPeso pesoActual={78} alGanar={(s) => ganados.push(s)} />);
+
+  fireEvent.change(screen.getByLabelText("Peso en kilos"), { target: { value: "77.5" } });
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  expect(vi.mocked(guardarPeso)).toHaveBeenCalledWith(77.5);
+  await vi.waitFor(() => expect(ganados).toEqual([bloque]));
+});
+
+test("si el peso no cambia el servidor manda system a null y no se sube nada", async () => {
+  const ganados: unknown[] = [];
+  vi.mocked(guardarPeso).mockResolvedValue({ user: {} as never, system: null });
+  render(<SeccionPeso pesoActual={78} alGanar={(s) => ganados.push(s)} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  await vi.waitFor(() => expect(vi.mocked(guardarPeso)).toHaveBeenCalled());
+  expect(ganados).toEqual([]);
 });
