@@ -158,3 +158,52 @@ test("un récord se anuncia con su marca anterior, o dice que es la primera", ()
   expect(textoRecord({ exercise: "Peso muerto", kind: "weight", value: 100, previous: null }))
     .toBe("Peso muerto: 100 kg, tu primera marca.");
 });
+
+import { macrosPara, textoAgua, textoRestante } from "./formato";
+
+const POLLO = {
+  calories_per_100g: 165,
+  protein_per_100g: 31,
+  carbs_per_100g: 0,
+  fat_per_100g: 3.6,
+  fiber_per_100g: 0,
+  sugar_per_100g: 0,
+};
+
+test("los macros se calculan por regla de tres sobre 100 g", () => {
+  expect(macrosPara(POLLO, 150)).toEqual({
+    calories: 247.5,
+    protein: 46.5,
+    carbs: 0,
+    fat: 5.4,
+    fiber: 0,
+    sugar: 0,
+  });
+});
+
+test("los macros se redondean a dos decimales, como el servidor", () => {
+  // 3,6 × 0,33 = 1,188. El servidor hace round(..., 2) y devuelve 1.19: si aquí
+  // saliera 1.188, la cifra cambiaría sola al recargar la pantalla.
+  expect(macrosPara(POLLO, 33).fat).toBe(1.19);
+});
+
+test("una cantidad de cero da todo a cero y no NaN", () => {
+  expect(macrosPara(POLLO, 0).calories).toBe(0);
+});
+
+test("el texto de lo que queda distingue quedarse corto de pasarse", () => {
+  expect(textoRestante(1360, 2000)).toBe("te quedan 640 kcal");
+  expect(textoRestante(2120, 2000)).toBe("te has pasado en 120 kcal");
+  expect(textoRestante(2000, 2000)).toBe("has llegado justo a tu objetivo");
+});
+
+test("sin objetivo nutricional el texto lo dice en vez de inventarse un número", () => {
+  expect(textoRestante(1360, null)).toBe("todavía sin objetivo");
+});
+
+test("el agua se cuenta en litros con coma, que es como se dice en español", () => {
+  expect(textoAgua(1500, 2000)).toBe("1,5 de 2 litros");
+  expect(textoAgua(0, 2000)).toBe("0 de 2 litros");
+  // Pasarse está bien y no se recorta: bebiste lo que bebiste.
+  expect(textoAgua(2250, 2000)).toBe("2,25 de 2 litros");
+});
