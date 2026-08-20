@@ -136,7 +136,20 @@ export async function pedir<T>(
 
 // ── Autenticación ───────────────────────────────────────────────────────────
 
-export type Usuario = { name: string; email: string; is_admin: boolean };
+export type Usuario = {
+  name: string;
+  email: string;
+  is_admin: boolean;
+  /** ⚠️ `users.weight` es una columna float y el modelo no la castea, así que puede llegar
+   *  como cadena. `usuarioActual()` la pasa por `Number()`, igual que ya se hace con
+   *  `max_weight`: sin eso, `"75.5" + 5` daría `"75.55"` en cualquier suma. */
+  weight: number | null;
+  height: number | null;
+  age: number | null;
+  gender: "male" | "female" | null;
+  weekly_goal: number | null;
+  water_goal_ml: number | null;
+};
 
 // ── El Sistema ──────────────────────────────────────────────────────────────
 
@@ -219,7 +232,8 @@ export function salir() {
     si se enseña «hoy» o el login. */
 export async function usuarioActual(): Promise<Usuario | null> {
   try {
-    return await pedir<Usuario>("/user", { avisarSiCaduca: false });
+    const crudo = await pedir<Usuario>("/user", { avisarSiCaduca: false });
+    return { ...crudo, weight: crudo.weight == null ? null : Number(crudo.weight) };
   } catch {
     return null;
   }
@@ -532,4 +546,149 @@ export function crearAlimento(datos: AlimentoNuevo) {
     metodo: "POST",
     cuerpo: datos,
   });
+}
+
+// ── Hábitos: agua, suplementos, actividad y peso ─────────────────────────────
+
+export type DiaDeAgua = {
+  date: string;
+  total_ml: number;
+  goal_ml: number;
+  /** El servidor lo topa en 100. Para el texto en litros se usa `total_ml`, que no. */
+  pct: number;
+  entries: { id: number; amount_ml: number }[];
+};
+
+export function agua(fecha: string) {
+  return pedir<DiaDeAgua>(`/water?date=${encodeURIComponent(fecha)}`);
+}
+
+/** Entre 1 y 2000 ml por registro. */
+export function anadirAgua(fecha: string, ml: number) {
+  return pedir<{ total_ml: number; goal_ml: number; pct: number; system: BloqueSistema }>(
+    "/water",
+    { metodo: "POST", cuerpo: { date: fecha, amount_ml: ml } },
+  );
+}
+
+/** Entre 500 y 6000 ml. */
+export function objetivoAgua(ml: number) {
+  return pedir<{ goal_ml: number }>("/water/goal", { metodo: "PUT", cuerpo: { goal_ml: ml } });
+}
+
+/** Las cuatro claves son las del servidor. Ojo: `vitamina_d`, sin el 3, aunque se
+ *  escriba «Vitamina D3» en pantalla. */
+export type ClaveSuplemento = "multivitaminas" | "omega3" | "vitamina_d" | "magnesio";
+
+export type Suplemento = {
+  key: ClaveSuplemento;
+  name: string;
+  dose: string;
+  taken: boolean;
+};
+
+export function suplementos(fecha: string) {
+  return pedir<{ items: Suplemento[]; taken_count: number; total_count: number }>(
+    `/supplements?date=${encodeURIComponent(fecha)}`,
+  );
+}
+
+/** ⚠️ No devuelve el estado actualizado, solo el bloque `system`. Quien llame a esto pinta
+ *  el cambio por su cuenta. */
+export function marcarSuplemento(fecha: string, clave: ClaveSuplemento, tomado: boolean) {
+  return pedir<{ message: string; system: BloqueSistema }>("/supplements", {
+    metodo: "PUT",
+    cuerpo: { date: fecha, supplement_key: clave, taken: tomado },
+  });
+}
+
+export type DiaDeActividad = { date: string; steps: number; calories_burned: number };
+
+export function actividad(fecha: string) {
+  return pedir<DiaDeActividad>(`/activity?date=${encodeURIComponent(fecha)}`);
+}
+
+/** ⚠️ El servidor exige las dos cifras. Las calorías son opcionales en la interfaz —mucha
+ *  gente solo conoce sus pasos— y aquí se manda 0 cuando no se saben. **No se estiman a
+ *  partir de los pasos:** sería un número inventado presentado como dato de salud. */
+export function guardarActividad(fecha: string, pasos: number, calorias: number) {
+  return pedir<DiaDeActividad & { system: BloqueSistema | null }>("/activity", {
+    metodo: "PUT",
+    cuerpo: { date: fecha, steps: pasos, calories_burned: calorias },
+  });
+}
+
+/** ⚠️ `system` llega a `null` si el peso no cambió. */
+export function guardarPeso(kg: number) {
+  return pedir<{ user: Usuario; system: BloqueSistema | null }>("/user/profile", {
+    metodo: "PUT",
+    cuerpo: { weight: kg },
+  });
+}
+
+/** Los datos del cuerpo que necesita el asistente, cuando falta alguno. */
+export function guardarDatosCuerpo(datos: {
+  weight?: number;
+  height?: number;
+  age?: number;
+  gender?: "male" | "female";
+}) {
+  return pedir<{ user: Usuario; system: BloqueSistema | null }>("/user/profile", {
+    metodo: "PUT",
+    cuerpo: datos,
+  });
+}
+
+// ── El objetivo nutricional ─────────────────────────────────────────────────
+
+import type { ObjetivoNutricional } from "./formato";
+
+/** `has_goal` a false significa que `goal` es una sugerencia calculada al vuelo por el
+ *  servidor, no algo guardado. La misión de proteína solo existe cuando es true. */
+export function objetivoNutricional() {
+  return pedir<{ goal: ObjetivoNutricional; has_goal: boolean }>("/nutrition/goal");
+}
+
+export function guardarObjetivoNutricional(objetivo: ObjetivoNutricional) {
+  return pedir<{ message: string; goal: ObjetivoNutricional }>("/nutrition/goal", {
+    metodo: "PUT",
+    cuerpo: objetivo,
+  });
+}
+
+// ── Subir ficheros ──────────────────────────────────────────────────────────
+
+/** `pedir()` manda siempre JSON. Una subida necesita `FormData`, y ahí hay dos reglas que
+ *  no son evidentes:
+ *
+ *  1. **No se pone `Content-Type`.** Lo pone el navegador, y tiene que incluir el
+ *     `boundary` que él mismo genera. Ponerlo a mano se lo carga: el servidor no encuentra
+ *     ningún fichero y responde 422 diciendo que falta.
+ *  2. **El `X-XSRF-TOKEN` sí va**, como en toda escritura, o Laravel contesta 419. */
+export async function subir<T>(ruta: string, campo: string, fichero: File): Promise<T> {
+  const cuerpo = new FormData();
+  cuerpo.append(campo, fichero);
+
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`/api${ruta}`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "X-XSRF-TOKEN": await asegurarCsrf() },
+      body: cuerpo,
+    });
+  } catch {
+    throw new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} });
+  }
+
+  if (respuesta.ok) return (await respuesta.json()) as T;
+
+  if (respuesta.status === 413 || respuesta.status === 422) {
+    throw new ErrorApi({
+      general: "La foto no se ha podido subir. Prueba con otra más pequeña.",
+      campos: {},
+    });
+  }
+
+  throw new ErrorApi({ general: "No hemos podido subir la foto. Inténtalo otra vez.", campos: {} });
 }

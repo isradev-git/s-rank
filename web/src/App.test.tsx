@@ -26,7 +26,17 @@ const PENDIENTE: Sesion = {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.mocked(usuarioActual).mockResolvedValue({ name: "Isra", email: "isra@local.test", is_admin: false });
+  vi.mocked(usuarioActual).mockResolvedValue({
+    name: "Isra",
+    email: "isra@local.test",
+    is_admin: false,
+    weight: null,
+    height: null,
+    age: null,
+    gender: null,
+    weekly_goal: null,
+    water_goal_ml: null,
+  });
 });
 
 const pintar = () => render(<BrowserRouter><App /></BrowserRouter>);

@@ -14,7 +14,19 @@ vi.mock("../api", async (importOriginal) => ({
   diaDeHoy: vi.fn(),
 }));
 
-const USUARIO: Usuario = { name: "Isra", email: "isra@local.test", is_admin: false };
+// Los campos del cuerpo van a null: quien no ha pasado por el asistente los tiene así, y
+// es el caso que más veces se abre esta pantalla.
+const USUARIO: Usuario = {
+  name: "Isra",
+  email: "isra@local.test",
+  is_admin: false,
+  weight: null,
+  height: null,
+  age: null,
+  gender: null,
+  weekly_goal: null,
+  water_goal_ml: null,
+};
 
 const DIA: DiaDeHoy = {
   date: "2026-08-12",

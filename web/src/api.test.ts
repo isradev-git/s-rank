@@ -207,3 +207,22 @@ test("el buscador manda el texto escapado y desenvuelve la lista", async () => {
   // tipados como los de fetch y `calls[0][0]` existe.
   expect(vi.mocked(fetch).mock.calls[0][0]).toContain("aceite%20%26%20sal");
 });
+
+import { subir } from "./api";
+
+test("subir no pone Content-Type a mano: lo pone el navegador con su boundary", async () => {
+  servidorQueResponde(200, { image_path: "nutrition/foods/x.jpg" });
+  document.cookie = "XSRF-TOKEN=abc123";
+
+  await subir("/foods/1/image", "image", new File(["x"], "x.jpg", { type: "image/jpeg" }));
+
+  const opciones = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+  const cabeceras = opciones.headers as Record<string, string>;
+
+  // Con Content-Type puesto a mano, el boundary se pierde y el servidor no encuentra
+  // ningún fichero: responde 422 diciendo que «image» es obligatorio.
+  expect(cabeceras["Content-Type"]).toBeUndefined();
+  // Y el token sí tiene que ir, o toda escritura contesta 419.
+  expect(cabeceras["X-XSRF-TOKEN"]).toBe("abc123");
+  expect(opciones.body).toBeInstanceOf(FormData);
+});
