@@ -213,3 +213,61 @@ test("lo que se levantó la última vez se enseña como pista", () => {
   );
   expect(screen.getByText("75×5")).toBeTruthy();
 });
+
+import { Casilla, ChipComida, FilaMacros } from "./componentes";
+
+test("una casilla dice su estado con palabras, no con el dibujo", () => {
+  render(<Casilla etiqueta="Multivitaminas" marcada onCambiar={() => {}} />);
+
+  // Lo que se oye es «Multivitaminas, tomado». El [✓] es decoración.
+  const boton = screen.getByRole("button", { name: "Multivitaminas, tomado" });
+  expect(boton.getAttribute("aria-pressed")).toBe("true");
+  expect(boton.textContent).not.toContain("corchete");
+});
+
+test("una casilla sin marcar se oye pendiente", () => {
+  render(<Casilla etiqueta="Magnesio" marcada={false} onCambiar={() => {}} />);
+  expect(screen.getByRole("button", { name: "Magnesio, sin tomar" })).toBeTruthy();
+});
+
+test("la casilla avisa del cambio que se pide, no del que ya hay", () => {
+  const cambios: boolean[] = [];
+  render(<Casilla etiqueta="Omega 3" marcada={false} onCambiar={(v) => cambios.push(v)} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Omega 3, sin tomar" }));
+
+  expect(cambios).toEqual([true]);
+});
+
+test("los macros se dicen con palabras enteras y sin abreviar", () => {
+  render(
+    <FilaMacros macros={{ calories: 1360, protein: 92, carbs: 140, fat: 45, fiber: 18, sugar: 30 }} />,
+  );
+
+  expect(screen.getByText("Proteínas")).toBeTruthy();
+  expect(screen.getByText("Hidratos")).toBeTruthy();
+  expect(screen.getByText("Grasas")).toBeTruthy();
+  // Nada de «P/H/G» ni de «kcal/100g» sin explicar.
+  expect(screen.queryByText("P")).toBe(null);
+});
+
+test("el chip de un reciente registra con un toque y ajustar es otro botón", () => {
+  const registrados: string[] = [];
+  const ajustados: string[] = [];
+  render(
+    <ChipComida
+      reciente={{ id: 1, nombre: "Café con leche", gramos: 200, tipo: "breakfast", kcal100: 44 }}
+      kcal={88}
+      onRegistrar={() => registrados.push("sí")}
+      onAjustar={() => ajustados.push("sí")}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Café con leche, 200 g, 88 kilocalorías" }));
+  expect(registrados).toHaveLength(1);
+
+  // Ajustar es un botón con su propio nombre: un mantener pulsado no se ve, no se puede
+  // teclear y en el móvil pelea con el menú del navegador.
+  fireEvent.click(screen.getByRole("button", { name: "Cambiar la cantidad de Café con leche" }));
+  expect(ajustados).toHaveLength(1);
+});

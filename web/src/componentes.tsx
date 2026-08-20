@@ -7,7 +7,9 @@ import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import type { BloqueSistema, Mision, SerieAnterior } from "./api";
 import type { Modo, Serie } from "./borrador";
+import type { Reciente } from "./recientes";
 import { BLOQUES, bloquesEncendidos, textoRecord } from "./formato";
+import type { Macros } from "./formato";
 
 // A diferencia del NumberFormat de Java, Intl.NumberFormat sí se puede compartir:
 // no guarda estado entre llamadas, y construirlo cada vez es caro.
@@ -384,5 +386,103 @@ export function FilaSerie({
         </button>
       </td>
     </tr>
+  );
+}
+
+/** `[✓] Multivitaminas`. Es un botón con `aria-pressed` y no un `<input type=checkbox>`
+ *  porque no vive dentro de ningún formulario: cada toque es una petición, no un campo que
+ *  se envía luego. Lo que se oye es «Multivitaminas, tomado». */
+export function Casilla({
+  etiqueta,
+  marcada,
+  onCambiar,
+  disabled,
+}: {
+  etiqueta: string;
+  marcada: boolean;
+  onCambiar: (marcada: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={marcada ? "casilla marcada" : "casilla"}
+      aria-pressed={marcada}
+      aria-label={`${etiqueta}, ${marcada ? "tomado" : "sin tomar"}`}
+      disabled={disabled}
+      onClick={() => onCambiar(!marcada)}
+    >
+      <span className="marca" aria-hidden="true">[{marcada ? "✓" : " "}]</span>
+      <span aria-hidden="true">{etiqueta}</span>
+    </button>
+  );
+}
+
+/** Los tres macros en fila, con las palabras enteras. Nada de «P/H/G» ni de abreviaturas
+ *  de tabla nutricional: hay quien no ha visto una en su vida. La fibra y el azúcar se
+ *  registran pero no se pintan aquí — no hay misión de fibra y la fila se vuelve ilegible
+ *  con cinco columnas en un móvil. */
+export function FilaMacros({ macros }: { macros: Macros }) {
+  const columnas = [
+    { etiqueta: "Proteínas", valor: macros.protein },
+    { etiqueta: "Hidratos", valor: macros.carbs },
+    { etiqueta: "Grasas", valor: macros.fat },
+  ];
+
+  return (
+    <ul className="fila-macros">
+      {columnas.map((c) => (
+        <li key={c.etiqueta}>
+          <span className="valor">{NUMEROS.format(Math.round(c.valor))} g</span>
+          <span className="etiqueta-macro">{c.etiqueta}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** «Lo de siempre». Pulsar el chip registra con la cantidad de la última vez; el segundo
+ *  botón abre la cantidad. Dos botones y no un mantener pulsado: un gesto largo no se ve,
+ *  no tiene equivalente de teclado y en el móvil pelea con el menú contextual. */
+export function ChipComida({
+  reciente,
+  kcal,
+  onRegistrar,
+  onAjustar,
+  disabled,
+}: {
+  reciente: Reciente;
+  kcal: number;
+  onRegistrar: () => void;
+  onAjustar: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <li className="chip-comida">
+      <button
+        type="button"
+        className="chip-principal"
+        // «kilocalorías» entero: «kcal» leído por un lector de pantalla suena a nada.
+        aria-label={`${reciente.nombre}, ${reciente.gramos} g, ${Math.round(kcal)} kilocalorías`}
+        disabled={disabled}
+        onClick={onRegistrar}
+      >
+        <span aria-hidden="true">[ </span>
+        <span className="nombre" aria-hidden="true">{reciente.nombre}</span>
+        <span className="cantidad" aria-hidden="true">{reciente.gramos} g</span>
+        <span className="kcal" aria-hidden="true">{NUMEROS.format(Math.round(kcal))} kcal</span>
+        <span aria-hidden="true"> ]</span>
+      </button>
+      <button
+        type="button"
+        className="chip-ajustar"
+        // El texto suelto «CAMBIAR» no dice de qué alimento habla.
+        aria-label={`Cambiar la cantidad de ${reciente.nombre}`}
+        disabled={disabled}
+        onClick={onAjustar}
+      >
+        <span aria-hidden="true">[ CAMBIAR ]</span>
+      </button>
+    </li>
   );
 }

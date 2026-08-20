@@ -637,3 +637,90 @@ a.boton {
   justify-content: center;
   text-decoration: none;
 }
+
+/* Casillas de suplementos: dos por fila en un móvil, con 48 px de alto para que se
+   acierten de pie y con una mano. */
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  width: 100%;
+  padding: 0 0.75rem;
+  background: var(--superficie);
+  border: 1px solid var(--lineas);
+  color: var(--texto);
+  font: inherit;
+  font-size: var(--cuerpo);
+  text-align: left;
+}
+
+.casilla.marcada { border-color: var(--verde); }
+.casilla.marcada .marca { color: var(--verde); }
+.casilla:disabled { opacity: 0.6; }
+
+.rejilla-casillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  list-style: none;
+}
+
+/* Los tres macros en fila. El hueco lo abre el grid, nunca los espacios. */
+.fila-macros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  list-style: none;
+  text-align: center;
+}
+
+.fila-macros .valor {
+  display: block;
+  font-size: var(--seccion);
+  color: var(--texto);
+}
+
+.fila-macros .etiqueta-macro {
+  display: block;
+  font-size: var(--etiqueta);
+  color: var(--apagado);
+}
+
+/* «Lo de siempre»: el chip ocupa la fila y el botón de cambiar va a su derecha. */
+.lista-chips { padding: 0; margin: 0.5rem 0 0; list-style: none; }
+
+.chip-comida { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+
+.chip-principal {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 0.5rem;
+  background: var(--superficie);
+  border: 1px solid var(--lineas);
+  color: var(--texto);
+  font: inherit;
+  font-size: var(--cuerpo);
+  text-align: left;
+}
+
+.chip-principal .nombre { flex: 1; }
+.chip-principal .cantidad,
+.chip-principal .kcal { color: var(--apagado); font-size: var(--nota); }
+
+.chip-ajustar {
+  min-height: 48px;
+  padding: 0 0.5rem;
+  background: transparent;
+  border: 1px solid var(--lineas);
+  color: var(--apagado);
+  font: inherit;
+  font-size: var(--nota);
+}
