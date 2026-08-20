@@ -105,16 +105,23 @@ móviles limitados y el hosting es compartido.
 
 ## Terminado cuando
 
-- [ ] Se registra una comida del catálogo en menos de cinco toques.
-- [ ] Se puede crear un alimento propio con foto.
-- [ ] El agua se suma con incrementos rápidos y la barra se mueve.
-- [ ] Llegar al objetivo de agua completa la misión y lo anuncia.
-- [ ] Los cuatro suplementos marcados completan su misión.
-- [ ] El asistente nutricional calcula el objetivo con Mifflin-St Jeor.
-- [ ] Las recetas se crean y se usan.
-- [ ] Los pasos se guardan y mantienen la racha sin dar XP de entreno.
-- [ ] Apuntar el peso completa su misión cuando toca.
-- [ ] Hay tests de las pantallas y de las funciones con ramas.
+- [x] Se registra una comida del catálogo en menos de cinco toques.
+- [x] Se puede crear un alimento propio con foto.
+- [x] El agua se suma con incrementos rápidos y la barra se mueve.
+- [x] Llegar al objetivo de agua completa la misión y lo anuncia.
+- [x] Los cuatro suplementos marcados completan su misión.
+- [x] El asistente nutricional calcula el objetivo con Mifflin-St Jeor.
+- [x] Las recetas se crean y se usan.
+- [x] Los pasos se guardan y mantienen la racha sin dar XP de entreno.
+- [x] Apuntar el peso completa su misión cuando toca.
+- [x] Hay tests de las pantallas y de las funciones con ramas.
+
+Todo lo de arriba está construido y con sus tests: 238 en el frontend y 288 en el backend.
+**Falta la última comprobación, la que la suite no puede hacer:** subir `deploy/` por FTP
+y recorrer la lista con la aplicación instalada en el móvil. Los cuatro fallos de la fase
+1.0 pasaron 254 tests y solo aparecieron al tocar el servidor; el de la CSP de esta fase
+es de la misma familia y **en local es invisible**, porque no hay Apache que aplique la
+cabecera.
 
 ## Prompt para arrancar el chat
 

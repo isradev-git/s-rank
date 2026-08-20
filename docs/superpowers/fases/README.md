@@ -11,8 +11,8 @@ construir, qué endpoints se consumen y cuándo se puede dar por terminada.
 | [1.0](fase-1.0-backend.md) | Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha** — en producción |
 | [1.1](fase-1.1-esqueleto.md) | Esqueleto web: navegación, diseño, login, registro y PWA | **hecha** — en producción e instalada en el móvil |
 | [1.2](fase-1.2-entrenamiento.md) | Entrenamiento, con borrador sin conexión | **hecha** — comprobada en el móvil |
-| [1.3](fase-1.3-nutricion.md) | Nutrición, agua, suplementos, actividad, recetas | **la siguiente** |
-| [1.4](fase-1.4-progreso.md) | Historial, calendario, gráficas, récords | pendiente |
+| [1.3](fase-1.3-nutricion.md) | Nutrición, agua, suplementos, actividad, recetas | **construida** — falta comprobarla en el móvil |
+| [1.4](fase-1.4-progreso.md) | Historial, calendario, gráficas, récords | **la siguiente** |
 | [1.5](fase-1.5-perfil.md) | Perfil, logros, informe de salud, administración | pendiente |
 
 El orden no es negociable: 1.1 define el aspecto de todo lo demás, y 1.4 vive de los datos

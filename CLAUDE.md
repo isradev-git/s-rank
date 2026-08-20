@@ -40,8 +40,8 @@ Se trabaja **una fase por conversación**. El índice dice en cuál estamos y qu
 | 1.0 · Backend: MySQL, el Sistema, auth móvil, despliegue | **hecha**, en producción |
 | 1.1 · Esqueleto web: navegación, diseño, login, PWA | **hecha**, en producción e instalada en el móvil |
 | 1.2 · Entrenamiento, con borrador sin conexión | **hecha**, comprobada en el móvil |
-| 1.3 · Nutrición, agua, suplementos, actividad | **la siguiente** |
-| 1.4 · Progreso: historial, calendario, gráficas | pendiente |
+| 1.3 · Nutrición, agua, suplementos, actividad, recetas | **construida**, falta comprobarla en el móvil |
+| 1.4 · Progreso: historial, calendario, gráficas | **la siguiente** |
 | 1.5 · Perfil, logros, administración | pendiente |
 
 ## Las dos reglas rectoras
@@ -96,11 +96,15 @@ que es la herramienta que hace ese trabajo de verdad.
     src/
       api.ts             la única puerta a la API: peticiones y traducción de errores
       borrador.ts        que no se pierda un entreno: localStorage, cola y subida
+      recientes.ts       «lo de siempre»: los últimos alimentos, en localStorage
+      foto.ts            encoge una foto con <canvas> antes de subirla
       componentes.tsx    los componentes del sistema de diseño, todos juntos
       formato.ts         los cálculos y textos con ramas — es lo que está probado
       estilos.css        los once colores y la escala tipográfica
       pantallas/         Login · Registro · Recuperar · Hoy
                          Elegir · Sesion · Resumen · Plantillas
+                         Nutricion · AnadirComida · CrearAlimento · Objetivo
+                         Recetas · CrearReceta · habitos (secciones de «hoy»)
       App.tsx            rutas, pestañas y el portero de sesión
     public/          fuentes, iconos, manifiesto y el trabajador de servicio
   backend/           Laravel API-only, YA en producción
@@ -192,6 +196,15 @@ medianoche menos dos horas. El `date` de `/api/system/today` ya llega resuelto: 
 escribe en UTC, sin convertir a la zona del navegador.
 
 **Comparar fechas con `whereDate`, no con `where`.** Eloquent las guarda con hora incluida.
+
+**La CSP también bloquea `blob:` y `data:`.** `img-src 'self'` no deja pintar una vista
+previa hecha con `URL.createObjectURL` ni un `canvas` volcado a `data:`. En local no se ve
+—no hay Apache—, y en el servidor sale un hueco en blanco sin ningún error en la interfaz.
+Por eso lleva `img-src 'self' blob:`.
+
+**Las recetas de usuario nacen visibles para todos.** `RecipeController::store` las guarda
+con `is_system = true`. La pantalla de crear lo avisa; el arreglo está pendiente porque
+cambia la visibilidad de filas que ya están en producción.
 
 **Los mensajes de validación ya salen en español**, en `backend/lang/es/validation.php`.
 `APP_LOCALE` por defecto es `es` en `config/app.php`, así que no hay que acordarse de
