@@ -758,3 +758,6 @@ a.boton {
   margin: 0.5rem 0;
   border: 1px solid var(--lineas);
 }
+
+.lista-opciones { padding: 0; margin: 0.5rem 0 0; list-style: none; }
+.lista-opciones li { margin-bottom: 0.5rem; }

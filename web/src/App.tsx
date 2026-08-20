@@ -16,6 +16,7 @@ import Elegir from "./pantallas/Elegir";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
 import Nutricion from "./pantallas/Nutricion";
+import Objetivo from "./pantallas/Objetivo";
 import Plantillas from "./pantallas/Plantillas";
 import Recuperar from "./pantallas/Recuperar";
 import Registro from "./pantallas/Registro";
@@ -198,6 +199,7 @@ export default function App() {
         <Route path="/nutricion" element={<Nutricion />} />
         <Route path="/nutricion/anadir" element={<AnadirComida />} />
         <Route path="/nutricion/alimento/nuevo" element={<CrearAlimento />} />
+        <Route path="/nutricion/objetivo" element={<Objetivo />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
