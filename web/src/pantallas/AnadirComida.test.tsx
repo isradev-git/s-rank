@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { diaDeHoy, registrarComida } from "../api";
 import { apuntar } from "../recientes";
 import AnadirComida from "./AnadirComida";
@@ -32,6 +32,11 @@ beforeEach(() => {
     message: "ok", meal_log: {}, system: {},
   } as never);
 });
+
+// Aquí y no al final del test que los pone: si ese test falla antes de restaurarlos, los
+// temporizadores falsos se quedan puestos y todos los siguientes agotan su tiempo sin que
+// haya nada roto en el código.
+afterEach(() => vi.useRealTimers());
 
 test("registrar un reciente es un solo toque dentro de la pantalla", async () => {
   apuntar(CAFE);
@@ -86,4 +91,89 @@ test("si el registro falla se dice con palabras y el chip vuelve a poderse pulsa
 test("un tipo de comida que no existe cae en desayuno en vez de romperse", async () => {
   pintar("cualquiercosa");
   expect(await screen.findByText(/Desayuno/)).toBeTruthy();
+});
+
+import { buscarAlimentos } from "../api";
+
+const POLLO = {
+  id: 7, name: "Pechuga de pollo", brand: null, category: "carnes", unit: "g" as const,
+  is_verified: true,
+  calories_per_100g: 165, protein_per_100g: 31, carbs_per_100g: 0,
+  fat_per_100g: 3.6, fiber_per_100g: 0, sugar_per_100g: 0,
+};
+
+test("el buscador espera antes de pedir, no una petición por tecla", async () => {
+  vi.useFakeTimers();
+  vi.mocked(buscarAlimentos).mockResolvedValue([POLLO]);
+  pintar();
+
+  // getByLabelText y no findByLabelText: las consultas «find» esperan con un reloj que
+  // aquí no avanza solo, así que se quedarían colgadas hasta el tiempo límite.
+  const campo = screen.getByLabelText("Buscar un alimento");
+  fireEvent.change(campo, { target: { value: "p" } });
+  fireEvent.change(campo, { target: { value: "po" } });
+  fireEvent.change(campo, { target: { value: "pol" } });
+
+  // 1.506 alimentos y una conexión de móvil: una petición por tecla es tirar datos.
+  expect(vi.mocked(buscarAlimentos)).not.toHaveBeenCalled();
+
+  await vi.advanceTimersByTimeAsync(300);
+
+  expect(vi.mocked(buscarAlimentos)).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(buscarAlimentos)).toHaveBeenCalledWith("pol");
+});
+
+test("elegir un alimento precarga 100 g y enseña los macros de esa cantidad", async () => {
+  vi.mocked(buscarAlimentos).mockResolvedValue([POLLO]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Buscar un alimento"), {
+    target: { value: "pollo" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: /Pechuga de pollo/ }));
+
+  const cantidad = screen.getByLabelText("Cantidad en gramos") as HTMLInputElement;
+  expect(cantidad.value).toBe("100");
+  expect(screen.getByText("165 kcal")).toBeTruthy();
+});
+
+test("cambiar la cantidad recalcula los macros al vuelo", async () => {
+  vi.mocked(buscarAlimentos).mockResolvedValue([POLLO]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Buscar un alimento"), {
+    target: { value: "pollo" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: /Pechuga de pollo/ }));
+  fireEvent.change(screen.getByLabelText("Cantidad en gramos"), { target: { value: "150" } });
+
+  expect(screen.getByText("248 kcal")).toBeTruthy();
+});
+
+test("añadir manda el id y los gramos, y deja el alimento en los recientes", async () => {
+  vi.mocked(buscarAlimentos).mockResolvedValue([POLLO]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Buscar un alimento"), {
+    target: { value: "pollo" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: /Pechuga de pollo/ }));
+  fireEvent.change(screen.getByLabelText("Cantidad en gramos"), { target: { value: "150" } });
+  fireEvent.click(screen.getByRole("button", { name: "AÑADIR" }));
+
+  expect(vi.mocked(registrarComida)).toHaveBeenCalledWith({
+    date: "2026-08-20", meal_type: "breakfast", food_item_id: 7, quantity_grams: 150,
+  });
+});
+
+test("una búsqueda sin resultados lo dice y ofrece crear el alimento", async () => {
+  vi.mocked(buscarAlimentos).mockResolvedValue([]);
+  pintar();
+
+  fireEvent.change(await screen.findByLabelText("Buscar un alimento"), {
+    target: { value: "bizcocho de la abuela" },
+  });
+
+  expect(await screen.findByText("no hemos encontrado nada con ese nombre")).toBeTruthy();
+  expect(screen.getByRole("link", { name: /CREAR UN ALIMENTO/ })).toBeTruthy();
 });

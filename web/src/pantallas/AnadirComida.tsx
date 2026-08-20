@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
-  ErrorApi, TIPOS_COMIDA, diaDeHoy, registrarComida, type TipoComida,
+  ErrorApi, TIPOS_COMIDA, buscarAlimentos, diaDeHoy, registrarComida,
+  type Alimento, type TipoComida,
 } from "../api";
-import { ChipComida, Comentario, TituloPantalla } from "../componentes";
+import { Boton, Campo, ChipComida, Comentario, FilaMacros, TituloPantalla } from "../componentes";
+import { macrosPara } from "../formato";
 import { apuntar, recientes, type Reciente } from "../recientes";
+
+const ESPERA_MS = 300;
 
 /** El tipo viene de la URL, o sea de fuera. Cualquier cosa que no sea una de las cuatro
  *  claves del servidor cae en desayuno: un 422 por un parámetro mal escrito no es algo
@@ -24,6 +28,11 @@ export default function AnadirComida() {
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
 
+  const [texto, setTexto] = useState("");
+  const [encontrados, setEncontrados] = useState<Alimento[] | null>(null);
+  const [elegido, setElegido] = useState<Alimento | null>(null);
+  const [gramos, setGramos] = useState(100);
+
   useEffect(() => {
     diaDeHoy()
       .then((hoy) => setFecha(hoy.date))
@@ -31,6 +40,22 @@ export default function AnadirComida() {
   }, []);
 
   useEffect(() => setLista(recientes(tipo)), [tipo]);
+
+  // Una petición por tecla contra un catálogo de 1.506 alimentos, desde una conexión de
+  // móvil, es tirar datos. Se espera a que el usuario pare de escribir.
+  useEffect(() => {
+    const limpio = texto.trim();
+    if (limpio.length < 2) {
+      setEncontrados(null);
+      return;
+    }
+    const temporizador = setTimeout(() => {
+      buscarAlimentos(limpio)
+        .then(setEncontrados)
+        .catch(() => setFallo("No hemos podido buscar. Comprueba la conexión."));
+    }, ESPERA_MS);
+    return () => clearTimeout(temporizador);
+  }, [texto]);
 
   async function registrar(reciente: Reciente, gramos: number) {
     if (!fecha) return;
@@ -89,6 +114,75 @@ export default function AnadirComida() {
             />
           ))}
         </ul>
+      )}
+
+      <Comentario decorativo>buscar en el catálogo</Comentario>
+      <Campo
+        etiqueta="Buscar un alimento"
+        name="buscar"
+        type="search"
+        autoComplete="off"
+        value={texto}
+        onChange={(e) => { setTexto(e.target.value); setElegido(null); }}
+      />
+
+      {encontrados?.length === 0 && (
+        <>
+          <Comentario>no hemos encontrado nada con ese nombre</Comentario>
+          <div className="acciones">
+            <Link className="boton compacto" to="/nutricion/alimento/nuevo">
+              <span aria-hidden="true">[ </span>CREAR UN ALIMENTO<span aria-hidden="true"> ]</span>
+            </Link>
+          </div>
+        </>
+      )}
+
+      {!elegido && encontrados && encontrados.length > 0 && (
+        <ul className="lista-chips">
+          {encontrados.map((alimento) => (
+            <li key={alimento.id} className="chip-comida">
+              <button
+                type="button"
+                className="chip-principal"
+                aria-label={`${alimento.name}, ${Math.round(alimento.calories_per_100g)} kilocalorías por 100 ${alimento.unit}`}
+                onClick={() => { setElegido(alimento); setGramos(100); }}
+              >
+                <span className="nombre" aria-hidden="true">{alimento.name}</span>
+                <span className="kcal" aria-hidden="true">
+                  {Math.round(alimento.calories_per_100g)} kcal/100 {alimento.unit}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {elegido && (
+        <>
+          <Comentario>{elegido.name}</Comentario>
+          <Campo
+            etiqueta="Cantidad en gramos"
+            name="gramos"
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="5000"
+            value={gramos}
+            onChange={(e) => setGramos(Number(e.target.value))}
+          />
+          <p className="xp">{Math.round(macrosPara(elegido, gramos).calories)} kcal</p>
+          <FilaMacros macros={macrosPara(elegido, gramos)} />
+          <Boton
+            type="button"
+            disabled={guardando || !fecha || gramos < 1 || gramos > 5000}
+            onClick={() => void registrar(
+              { id: elegido.id, nombre: elegido.name, gramos, tipo, kcal100: elegido.calories_per_100g },
+              gramos,
+            )}
+          >
+            AÑADIR
+          </Boton>
+        </>
       )}
     </>
   );
