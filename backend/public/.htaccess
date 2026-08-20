@@ -10,7 +10,12 @@
 # hueco aquí o el navegador lo bloqueará sin decir nada visible en la interfaz.
 <IfModule mod_headers.c>
     Header always unset Content-Security-Policy
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+    # img-src lleva blob: porque la vista previa de una foto antes de subirla se pinta
+    # desde un objeto de la propia página (canvas → blob), no desde una URL del servidor.
+    # Con 'self' a secas el hueco sale en blanco y NO hay ningún error visible en la
+    # interfaz. En local no se ve: ahí no hay Apache que aplique esta cabecera.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
     # Las fotos de alimentos y recetas las sube el usuario y se sirven desde este mismo
     # dominio, así que Apache no puede ponerse a adivinar el tipo de un fichero: si

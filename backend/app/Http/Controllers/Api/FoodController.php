@@ -257,21 +257,24 @@ class FoodController extends Controller
                 $disk->delete($food->image_path);
             }
 
-            // Guardamos en storage/app/public/nutrition/foods/{uuid}.{ext}
+            // Guardamos en public/uploads/nutrition/foods/{uuid}.{ext}
             $path = $request->file('image')->store('nutrition/foods', 'uploads');
             $food->update(['image_path' => $path]);
         } catch (Throwable $e) {
             report($e);
 
             return response()->json([
-                'message' => 'No se pudo guardar la imagen en el servidor. Revisa permisos de storage y enlace /storage.',
+                'message' => 'No se pudo guardar la imagen en el servidor. Vuelve a intentarlo.',
             ], 500);
         }
 
         return response()->json([
             'message'    => 'Imagen subida correctamente.',
             'image_path' => $path,
-            'image_url'  => asset('storage/' . ltrim($path, '/')),
+            // Storage::disk('uploads')->url() y no asset('storage/...'): el disco apunta a
+            // public/uploads y en Ginernet no se pueden crear symlinks, así que /storage
+            // no existe. RecipeController ya lo hacía bien; esto lo iguala.
+            'image_url'  => Storage::disk('uploads')->url($path),
         ]);
     }
 
