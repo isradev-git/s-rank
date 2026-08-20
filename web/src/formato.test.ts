@@ -207,3 +207,47 @@ test("el agua se cuenta en litros con coma, que es como se dice en español", ()
   // Pasarse está bien y no se recorta: bebiste lo que bebiste.
   expect(textoAgua(2250, 2000)).toBe("2,25 de 2 litros");
 });
+
+import { calcularObjetivo } from "./formato";
+
+// Hombre de 80 kg, 180 cm, 30 años.
+// BMR = 10×80 + 6,25×180 − 5×30 + 5 = 800 + 1125 − 150 + 5 = 1780
+const HOMBRE = { weight: 80, height: 180, age: 30, gender: "male" as const };
+// Mujer de 65 kg, 165 cm, 30 años.
+// BMR = 650 + 1031,25 − 150 − 161 = 1370,25
+const MUJER = { weight: 65, height: 165, age: 30, gender: "female" as const };
+
+test("la constante de sexo cambia el resultado", () => {
+  // 1780 × 1,55 = 2759 → mantener no ajusta nada.
+  expect(calcularObjetivo(HOMBRE, "moderate", "maintain").daily_calories).toBe(2759);
+  // 1370,25 × 1,55 = 2123,8875 → 2124.
+  expect(calcularObjetivo(MUJER, "moderate", "maintain").daily_calories).toBe(2124);
+});
+
+test("perder resta 500 y ganar suma 300", () => {
+  expect(calcularObjetivo(HOMBRE, "moderate", "lose_weight").daily_calories).toBe(2259);
+  expect(calcularObjetivo(HOMBRE, "moderate", "gain_muscle").daily_calories).toBe(3059);
+});
+
+test("nunca baja de 1200 kcal", () => {
+  // Persona pequeña y sedentaria con déficit: el cálculo se iría por debajo de lo que
+  // ninguna dieta debería recomendar sin supervisión.
+  const menuda = { weight: 45, height: 150, age: 60, gender: "female" as const };
+  expect(calcularObjetivo(menuda, "sedentary", "lose_weight").daily_calories).toBe(1200);
+});
+
+test("los macros salen de los ratios del objetivo y cuadran con las calorías", () => {
+  const objetivo = calcularObjetivo(HOMBRE, "moderate", "maintain");
+  // maintain reparte 30 % proteína, 45 % hidratos, 25 % grasa.
+  expect(objetivo.target_protein).toBe(Math.round((2759 * 0.3) / 4));
+  expect(objetivo.target_carbs).toBe(Math.round((2759 * 0.45) / 4));
+  expect(objetivo.target_fat).toBe(Math.round((2759 * 0.25) / 9));
+  expect(objetivo.goal_type).toBe("maintain");
+});
+
+test("el factor de actividad se aplica", () => {
+  // 1780 × 1,2 = 2136.
+  expect(calcularObjetivo(HOMBRE, "sedentary", "maintain").daily_calories).toBe(2136);
+  // 1780 × 1,9 = 3382.
+  expect(calcularObjetivo(HOMBRE, "very_active", "maintain").daily_calories).toBe(3382);
+});

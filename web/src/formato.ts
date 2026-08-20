@@ -151,3 +151,76 @@ export function textoRestante(consumidas: number, objetivo: number | null): stri
 export function textoAgua(totalMl: number, objetivoMl: number): string {
   return `${CIFRA.format(totalMl / 1000)} de ${CIFRA.format(objetivoMl / 1000)} litros`;
 }
+
+/* El asistente nutricional, portado de FitLoop
+   (old/resources/views/nutrition/dashboard.blade.php:1037-1049 y :1222-1247).
+
+   ponytail: Mifflin-St Jeor queda escrita en dos sitios, aquí y en
+   NutritionGoal::calculateRecommended. Se acepta para que el asistente recalcule al
+   tocar, sin una petición por opción. El techo es que se separen; si pasa, el sitio
+   donde unificarlas es GET /api/nutrition/goal aceptando activity y goal_type. */
+
+export const ACTIVIDADES = [
+  { clave: "sedentary", etiqueta: "Poco o nada", factor: 1.2 },
+  { clave: "light", etiqueta: "Ejercicio ligero, de 1 a 3 días por semana", factor: 1.375 },
+  { clave: "moderate", etiqueta: "Ejercicio moderado, de 3 a 5 días", factor: 1.55 },
+  { clave: "active", etiqueta: "Ejercicio intenso, casi a diario", factor: 1.725 },
+  { clave: "very_active", etiqueta: "Muy intenso, o deporte más trabajo físico", factor: 1.9 },
+] as const;
+
+export const OBJETIVOS = [
+  { clave: "lose_weight", etiqueta: "Perder peso", ajuste: -500, ratios: [0.35, 0.4, 0.25] },
+  { clave: "maintain", etiqueta: "Mantener el peso", ajuste: 0, ratios: [0.3, 0.45, 0.25] },
+  { clave: "gain_muscle", etiqueta: "Ganar músculo", ajuste: 300, ratios: [0.3, 0.5, 0.2] },
+] as const;
+
+export type ClaveActividad = (typeof ACTIVIDADES)[number]["clave"];
+export type ClaveObjetivo = (typeof OBJETIVOS)[number]["clave"];
+
+export type DatosCuerpo = {
+  weight: number;
+  height: number;
+  age: number;
+  gender: "male" | "female";
+};
+
+/** Lo que acepta `PUT /api/nutrition/goal`. */
+export type ObjetivoNutricional = {
+  daily_calories: number;
+  target_protein: number;
+  target_carbs: number;
+  target_fat: number;
+  target_fiber: number;
+  goal_type: ClaveObjetivo;
+};
+
+/** Por debajo de esto no se recomienda una dieta sin que la vigile alguien. FitLoop ya
+ *  tenía este suelo y se conserva: el cálculo de una persona menuda y sedentaria con
+ *  déficit se va por debajo sin ningún aviso. */
+const MINIMO_KCAL = 1200;
+
+export function calcularObjetivo(
+  cuerpo: DatosCuerpo,
+  actividad: ClaveActividad,
+  objetivo: ClaveObjetivo,
+): ObjetivoNutricional {
+  const factor = ACTIVIDADES.find((a) => a.clave === actividad)!.factor;
+  const meta = OBJETIVOS.find((o) => o.clave === objetivo)!;
+
+  // Mifflin-St Jeor. La constante de sexo es +5 en hombres y −161 en mujeres.
+  const constante = cuerpo.gender === "female" ? -161 : 5;
+  const bmr = 10 * cuerpo.weight + 6.25 * cuerpo.height - 5 * cuerpo.age + constante;
+  const tdee = Math.round(bmr * factor);
+  const calorias = Math.max(MINIMO_KCAL, tdee + meta.ajuste);
+
+  const [proteina, hidratos, grasa] = meta.ratios;
+  return {
+    daily_calories: calorias,
+    // 4 kcal por gramo de proteína y de hidratos, 9 por gramo de grasa.
+    target_protein: Math.round((calorias * proteina) / 4),
+    target_carbs: Math.round((calorias * hidratos) / 4),
+    target_fat: Math.round((calorias * grasa) / 9),
+    target_fiber: 25,
+    goal_type: objetivo,
+  };
+}
