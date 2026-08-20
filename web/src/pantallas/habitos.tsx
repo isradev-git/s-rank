@@ -6,8 +6,11 @@
    se nota más que cualquier otra decisión de esta fase. */
 
 import { useCallback, useEffect, useState } from "react";
-import { ErrorApi, agua, anadirAgua, type BloqueSistema, type DiaDeAgua } from "../api";
-import { BarraBloques, Boton, Comentario, Seccion } from "../componentes";
+import {
+  ErrorApi, agua, anadirAgua, marcarSuplemento, suplementos,
+  type BloqueSistema, type ClaveSuplemento, type DiaDeAgua, type Suplemento,
+} from "../api";
+import { BarraBloques, Boton, Casilla, Comentario, Seccion } from "../componentes";
 import { textoAgua } from "../formato";
 
 /** Un vaso. FitLoop ya usaba 250 ml y es lo que cabe en un vaso normal. */
@@ -69,6 +72,70 @@ export function SeccionAgua({
         <Boton type="button" compacto onClick={() => void beber(VASO_ML)}>+1 VASO</Boton>
         <Boton type="button" compacto onClick={() => void beber(MEDIO_LITRO_ML)}>+MEDIO LITRO</Boton>
       </div>
+    </Seccion>
+  );
+}
+
+export function SeccionSuplementos({
+  fecha,
+  alGanar,
+}: {
+  fecha: string;
+  alGanar: (sistema: BloqueSistema) => void;
+}) {
+  const [items, setItems] = useState<Suplemento[] | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  useEffect(() => {
+    suplementos(fecha)
+      .then((r) => setItems(r.items))
+      .catch(() => setFallo("No hemos podido cargar los suplementos de hoy."));
+  }, [fecha]);
+
+  async function marcar(clave: ClaveSuplemento, tomado: boolean) {
+    if (!items) return;
+    const antes = items;
+    setItems(items.map((s) => (s.key === clave ? { ...s, taken: tomado } : s)));
+    setFallo(null);
+
+    try {
+      // ⚠️ El servidor NO devuelve el estado actualizado, solo el bloque `system`. Lo que
+      // se ve es lo que pintamos aquí.
+      const respuesta = await marcarSuplemento(fecha, clave, tomado);
+      alGanar(respuesta.system);
+    } catch (error) {
+      setItems(antes);
+      setFallo(
+        error instanceof ErrorApi && error.fallo.general?.includes("conexión")
+          ? "No se ha podido guardar. Comprueba la conexión."
+          : "No se ha podido guardar. Inténtalo otra vez.",
+      );
+    }
+  }
+
+  if (!items) {
+    return <Seccion titulo="Suplementos" resumen="cargando"><Comentario>cargando…</Comentario></Seccion>;
+  }
+
+  const tomados = items.filter((s) => s.taken).length;
+
+  return (
+    // El recuento y nada más. Si la misión está cumplida lo decide el servidor: la misión
+    // solo se completa con los cuatro, y adelantarlo aquí sería que la app puntuara.
+    <Seccion titulo="Suplementos" resumen={`${tomados} de ${items.length}`}>
+      {fallo && <p className="aviso" role="alert">{fallo}</p>}
+
+      <ul className="rejilla-casillas">
+        {items.map((s) => (
+          <li key={s.key}>
+            <Casilla
+              etiqueta={s.name}
+              marcada={s.taken}
+              onCambiar={(marcada) => void marcar(s.key, marcada)}
+            />
+          </li>
+        ))}
+      </ul>
     </Seccion>
   );
 }

@@ -10,6 +10,8 @@ vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api")>()),
   agua: vi.fn(),
   anadirAgua: vi.fn(),
+  suplementos: vi.fn(),
+  marcarSuplemento: vi.fn(),
 }));
 
 const pintar = (alGanar = () => {}) =>
@@ -72,4 +74,63 @@ test("la barra se oye como un porcentaje, no como veinte caracteres", async () =
   pintar();
   const barra = await screen.findByRole("progressbar");
   expect(barra.getAttribute("aria-valuetext")).toBeTruthy();
+});
+
+import { marcarSuplemento, suplementos } from "../api";
+import { SeccionSuplementos } from "./habitos";
+
+const CUATRO = [
+  { key: "multivitaminas" as const, name: "Multivitaminas", dose: "1 pastilla", taken: false },
+  { key: "omega3" as const, name: "Omega 3", dose: "1 capsula", taken: false },
+  { key: "vitamina_d" as const, name: "Vitamina D3", dose: "1 pastilla", taken: false },
+  { key: "magnesio" as const, name: "Magnesio", dose: "1 pastilla", taken: false },
+];
+
+const pintarSuplementos = (alGanar = () => {}) =>
+  render(<SeccionSuplementos fecha="2026-08-20" alGanar={alGanar} />);
+
+test("se enseñan los cuatro y el recuento, no si la misión está cumplida", async () => {
+  vi.mocked(suplementos).mockResolvedValue({ items: CUATRO, taken_count: 0, total_count: 4 });
+  pintarSuplementos();
+
+  expect(await screen.findByRole("button", { name: "Multivitaminas, sin tomar" })).toBeTruthy();
+  expect(screen.getByText("0 de 4")).toBeTruthy();
+  // La misión la decide el servidor. Adelantarla aquí sería que la app puntuara.
+  expect(screen.queryByText(/misión/i)).toBe(null);
+});
+
+test("marcar uno manda su clave, la del servidor y no la que se ve", async () => {
+  vi.mocked(suplementos).mockResolvedValue({ items: CUATRO, taken_count: 0, total_count: 4 });
+  vi.mocked(marcarSuplemento).mockResolvedValue({ message: "ok", system: {} as never });
+  pintarSuplementos();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Vitamina D3, sin tomar" }));
+
+  // En pantalla es «Vitamina D3»; la clave del servidor es vitamina_d, sin el 3.
+  expect(vi.mocked(marcarSuplemento)).toHaveBeenCalledWith("2026-08-20", "vitamina_d", true);
+});
+
+test("la casilla se marca al instante y vuelve si la petición falla", async () => {
+  vi.mocked(suplementos).mockResolvedValue({ items: CUATRO, taken_count: 0, total_count: 4 });
+  vi.mocked(marcarSuplemento).mockRejectedValue(
+    new ErrorApi({ general: "No hay conexión. Comprueba el wifi o los datos.", campos: {} }),
+  );
+  pintarSuplementos();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Magnesio, sin tomar" }));
+
+  expect(await screen.findByRole("button", { name: "Magnesio, sin tomar" })).toBeTruthy();
+  expect(screen.getByText("No se ha podido guardar. Comprueba la conexión.")).toBeTruthy();
+});
+
+test("el recuento se mueve con la casilla", async () => {
+  vi.mocked(suplementos).mockResolvedValue({
+    items: [{ ...CUATRO[0], taken: true }, ...CUATRO.slice(1)], taken_count: 1, total_count: 4,
+  });
+  vi.mocked(marcarSuplemento).mockResolvedValue({ message: "ok", system: {} as never });
+  pintarSuplementos();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Omega 3, sin tomar" }));
+
+  expect(await screen.findByText("2 de 4")).toBeTruthy();
 });
