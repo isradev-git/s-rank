@@ -52,19 +52,33 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
     setBorrador(null);
   }
 
+  /** El resumen de nutrición, aparte y con su propio error.
+   *
+   *  Va suelto a propósito. Encadenado al resto, un fallo aquí dejaba la pantalla entera
+   *  en el aviso de error: sin misiones, sin nivel y sin racha, que ya habían llegado
+   *  bien. Son dos endpoints más que solo alimentan una sección; que se caiga la sección,
+   *  no «hoy». */
+  const cargarNutricion = useCallback(async (fecha: string) => {
+    try {
+      const [comidas, meta] = await Promise.all([
+        comidasDelDia(fecha),
+        objetivoNutricional(),
+      ]);
+      setResumen(comidas);
+      setObjetivo(meta.has_goal ? meta.goal.daily_calories : null);
+    } catch {
+      // Sin cifras no se inventa ninguna: la sección lo dice con palabras.
+      setResumen(null);
+    }
+  }, []);
+
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
       const dia = await diaDeHoy();
       setDatos(dia);
-
-      const [comidas, meta] = await Promise.all([
-        comidasDelDia(dia.date),
-        objetivoNutricional(),
-      ]);
-      setResumen(comidas);
-      setObjetivo(meta.has_goal ? meta.goal.daily_calories : null);
       setFallo(null);
+      void cargarNutricion(dia.date);
     } catch (error) {
       // El fallo se enseña aunque haya datos viejos en pantalla. Tragárselo porque «algo
       // se ve» es peor: el usuario se queda mirando cifras de ayer creyéndolas de hoy.
@@ -76,7 +90,7 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [cargarNutricion]);
 
   useEffect(() => {
     void cargar();
@@ -206,13 +220,16 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
 
       <Seccion
         titulo="Nutrición"
-        resumen={resumen ? `${Math.round(resumen.totals.calories)} kcal` : "cargando"}
+        resumen={resumen ? `${Math.round(resumen.totals.calories)} kcal` : "sin cargar"}
       >
-        {resumen && (
+        {resumen ? (
           <>
             <Comentario>{textoRestante(resumen.totals.calories, objetivo)}</Comentario>
             <FilaMacros macros={resumen.totals} />
           </>
+        ) : (
+          // Un cero aquí sería mentira: no es que no hayas comido, es que no lo sabemos.
+          <Comentario>no hemos podido cargar lo que llevas comido</Comentario>
         )}
 
         <div className="acciones">

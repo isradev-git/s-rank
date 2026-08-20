@@ -335,3 +335,20 @@ test("no hay dos botones con el mismo nombre en la pantalla", async () => {
   const nombres = screen.getAllByRole("button").map((b) => b.textContent);
   expect(new Set(nombres).size).toBe(nombres.length);
 });
+
+test("si el resumen de nutrición falla, las misiones se siguen viendo", async () => {
+  // «Hoy» pasó de depender de una petición a depender de tres. Encadenadas en el mismo
+  // try, un fallo en el resumen de nutrición dejaba la pantalla entera en el aviso de
+  // error: sin misiones, sin nivel y sin racha, que ya habían llegado bien.
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  vi.mocked(comidasDelDia).mockRejectedValue(
+    new ErrorApi({ general: "No hemos podido conectar. Inténtalo otra vez.", campos: {} }),
+  );
+
+  pintar();
+
+  expect(await screen.findByText("Beber 2 litros de agua")).toBeTruthy();
+  expect(screen.getByText("NIVEL 4")).toBeTruthy();
+  // Y la sección de nutrición dice lo suyo, sin números inventados.
+  expect(screen.getByText("no hemos podido cargar lo que llevas comido")).toBeTruthy();
+});
