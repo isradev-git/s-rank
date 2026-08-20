@@ -724,3 +724,28 @@ a.boton {
   font: inherit;
   font-size: var(--nota);
 }
+
+.lista-entradas { padding: 0; margin: 0.5rem 0 0; list-style: none; }
+
+.lista-entradas li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  border-bottom: 1px solid var(--lineas);
+  font-size: var(--cuerpo);
+}
+
+.lista-entradas .nombre { flex: 1; }
+.lista-entradas .cantidad,
+.lista-entradas .kcal { color: var(--apagado); font-size: var(--nota); }
+
+.lista-entradas .quitar {
+  min-height: 48px;
+  padding: 0 0.5rem;
+  background: transparent;
+  border: 0;
+  color: var(--apagado);
+  font: inherit;
+  font-size: var(--nota);
+}

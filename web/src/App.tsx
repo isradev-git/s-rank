@@ -13,6 +13,7 @@ import { Aviso, Boton, Comentario, TituloPantalla, VentanaSistema } from "./comp
 import Elegir from "./pantallas/Elegir";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
+import Nutricion from "./pantallas/Nutricion";
 import Plantillas from "./pantallas/Plantillas";
 import Recuperar from "./pantallas/Recuperar";
 import Registro from "./pantallas/Registro";
@@ -192,6 +193,7 @@ export default function App() {
         <Route path="/entrenar/sesion" element={<Sesion />} />
         <Route path="/entrenar/resumen" element={<Resumen />} />
         <Route path="/plantillas" element={<Plantillas />} />
+        <Route path="/nutricion" element={<Nutricion />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
