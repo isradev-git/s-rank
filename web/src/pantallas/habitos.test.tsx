@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
-import { ErrorApi, agua, anadirAgua } from "../api";
+import { ErrorApi, agua, anadirAgua, type BloqueSistema } from "../api";
 import { SeccionAgua } from "./habitos";
 
 vi.mock("../api", async (importOriginal) => ({
@@ -17,7 +17,7 @@ vi.mock("../api", async (importOriginal) => ({
   guardarPeso: vi.fn(),
 }));
 
-const pintar = (alGanar = () => {}) =>
+const pintar = (alGanar: (sistema: BloqueSistema) => void = () => {}) =>
   render(<SeccionAgua fecha="2026-08-20" alGanar={alGanar} />);
 
 beforeEach(() => {
@@ -89,7 +89,7 @@ const CUATRO = [
   { key: "magnesio" as const, name: "Magnesio", dose: "1 pastilla", taken: false },
 ];
 
-const pintarSuplementos = (alGanar = () => {}) =>
+const pintarSuplementos = (alGanar: (sistema: BloqueSistema) => void = () => {}) =>
   render(<SeccionSuplementos fecha="2026-08-20" alGanar={alGanar} />);
 
 test("se enseñan los cuatro y el recuento, no si la misión está cumplida", async () => {

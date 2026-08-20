@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { ErrorApi, diaDeHoy, type DiaDeHoy, type Usuario } from "../api";
+import {
+  ErrorApi, comidasDelDia, diaDeHoy, objetivoNutricional,
+  type BloqueSistema, type DiaDeComidas, type DiaDeHoy, type Usuario,
+} from "../api";
 import { borrar, leer } from "../borrador";
 import {
   BarraBloques,
   Boton,
   Comentario,
+  FilaMacros,
   FilaMision,
   InsigniaRango,
   Seccion,
   TituloPantalla,
+  VentanaSistema,
 } from "../componentes";
-import { seriesHechas, textoAntiguedad, textoRacha } from "../formato";
+import { seriesHechas, textoAntiguedad, textoRacha, textoRestante } from "../formato";
+import { SeccionActividad, SeccionAgua, SeccionPeso, SeccionSuplementos } from "./habitos";
 
 // `date` ya viene resuelto: el servidor decide en Europe/Madrid a qué día pertenecen las
 // misiones, y usar la zona del navegador diría «hoy» sobre un día distinto del que puntúa.
@@ -29,6 +35,12 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
 
+  const [resumen, setResumen] = useState<DiaDeComidas | null>(null);
+  const [objetivo, setObjetivo] = useState<number | null>(null);
+  // Lo que abre la ventana del Sistema. Se guarda aquí y no en cada sección: si cada una
+  // tuviera la suya, dos podrían salir a la vez.
+  const [premio, setPremio] = useState<BloqueSistema | null>(null);
+
   // El borrador se lee una vez al montar. Si cambia, es porque el usuario está en la
   // sesión, y al volver aquí la pantalla se monta otra vez.
   const [borrador, setBorrador] = useState(() => leer());
@@ -43,7 +55,15 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      setDatos(await diaDeHoy());
+      const dia = await diaDeHoy();
+      setDatos(dia);
+
+      const [comidas, meta] = await Promise.all([
+        comidasDelDia(dia.date),
+        objetivoNutricional(),
+      ]);
+      setResumen(comidas);
+      setObjetivo(meta.has_goal ? meta.goal.daily_calories : null);
       setFallo(null);
     } catch (error) {
       // El fallo se enseña aunque haya datos viejos en pantalla. Tragárselo porque «algo
@@ -61,6 +81,18 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  // Solo abre la ventana si hay algo que anunciar. VentanaSistema ya devuelve null cuando
+  // no hay motivos, pero dejarlo montado con un bloque vacío pone un diálogo invisible en
+  // el árbol y el foco se va a él.
+  function recogerPremio(sistema: BloqueSistema) {
+    const hayAlgo =
+      sistema.level_up || sistema.rank_up ||
+      sistema.achievements_unlocked.length > 0 || sistema.records.length > 0;
+    if (hayAlgo) setPremio(sistema);
+    // Cambió el progreso: las misiones y la barra de XP de arriba ya no son las de antes.
+    void cargar();
+  }
 
   // Al volver a la pestaña se recarga. Sin esto, quien deje la app abierta toda la noche
   // ve las misiones de ayer, porque el día lo decide el servidor y no el reloj de aquí.
@@ -169,6 +201,38 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
           </>
         )}
       </Seccion>
+
+      {premio && <VentanaSistema sistema={premio} alCerrar={() => setPremio(null)} />}
+
+      <Seccion
+        titulo="Nutrición"
+        resumen={resumen ? `${Math.round(resumen.totals.calories)} kcal` : "cargando"}
+      >
+        {resumen && (
+          <>
+            <Comentario>{textoRestante(resumen.totals.calories, objetivo)}</Comentario>
+            <FilaMacros macros={resumen.totals} />
+          </>
+        )}
+
+        <div className="acciones">
+          <Link className="boton compacto" to="/nutricion">
+            <span aria-hidden="true">[ </span>VER EL DÍA<span aria-hidden="true"> ]</span>
+          </Link>
+          {/* La misión de proteína solo existe si hay objetivo nutricional. Que no esté
+              es la señal de que falta, y este es el momento de invitar. */}
+          {!misiones.some((m) => m.key === "protein") && (
+            <Link className="boton compacto" to="/nutricion/objetivo">
+              <span aria-hidden="true">[ </span>CALCULAR MI OBJETIVO<span aria-hidden="true"> ]</span>
+            </Link>
+          )}
+        </div>
+      </Seccion>
+
+      <SeccionAgua fecha={datos.date} alGanar={recogerPremio} />
+      <SeccionSuplementos fecha={datos.date} alGanar={recogerPremio} />
+      <SeccionActividad fecha={datos.date} alGanar={recogerPremio} />
+      <SeccionPeso pesoActual={usuario.weight} alGanar={recogerPremio} />
     </>
   );
 }

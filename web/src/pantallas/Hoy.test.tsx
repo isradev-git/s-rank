@@ -5,13 +5,25 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import { ErrorApi, diaDeHoy, type DiaDeHoy, type Usuario } from "../api";
+import {
+  ErrorApi, actividad, agua, anadirAgua, comidasDelDia, diaDeHoy, objetivoNutricional,
+  suplementos, type DiaDeHoy, type Usuario,
+} from "../api";
 import { guardar, leer, type Serie, type Sesion } from "../borrador";
 import Hoy from "./Hoy";
 
 vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api")>()),
   diaDeHoy: vi.fn(),
+  comidasDelDia: vi.fn(),
+  objetivoNutricional: vi.fn(),
+  agua: vi.fn(),
+  anadirAgua: vi.fn(),
+  suplementos: vi.fn(),
+  marcarSuplemento: vi.fn(),
+  actividad: vi.fn(),
+  guardarActividad: vi.fn(),
+  guardarPeso: vi.fn(),
 }));
 
 // Los campos del cuerpo van a null: quien no ha pasado por el asistente los tiene así, y
@@ -101,6 +113,32 @@ function borradorDe(minutos: number): Sesion {
 beforeEach(() => {
   vi.mocked(diaDeHoy).mockReset();
   localStorage.clear();
+
+  // Las secciones de hábitos piden lo suyo al montarse. Sin estos valores se quedarían
+  // en «cargando…» y cualquier consulta por su contenido agotaría el tiempo.
+  vi.mocked(comidasDelDia).mockResolvedValue({
+    date: "2026-08-12",
+    meals: {
+      breakfast: { items: [], calories: 0 },
+      lunch: { items: [], calories: 0 },
+      dinner: { items: [], calories: 0 },
+      snack: { items: [], calories: 0 },
+    },
+    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 },
+    count: 0,
+    calories_burned: 0,
+  });
+  vi.mocked(objetivoNutricional).mockResolvedValue({
+    goal: { daily_calories: 2000 } as never,
+    has_goal: true,
+  });
+  vi.mocked(agua).mockResolvedValue({
+    date: "2026-08-12", total_ml: 1250, goal_ml: 2000, pct: 63, entries: [],
+  });
+  vi.mocked(suplementos).mockResolvedValue({ items: [], taken_count: 0, total_count: 0 });
+  vi.mocked(actividad).mockResolvedValue({
+    date: "2026-08-12", steps: 0, calories_burned: 0,
+  });
 });
 
 test("sin conexión lo dice en español y deja volver a probar", async () => {
@@ -221,4 +259,67 @@ test("sin borrador se ofrece empezar, con el motivo que manda el servidor", asyn
 
   expect(await screen.findByText("Te faltan 2 entrenos para tu meta de esta semana.")).toBeTruthy();
   expect(screen.getByRole("link", { name: "ENTRENAR" })).toBeTruthy();
+});
+
+const PROGRESO = DIA.progress;
+
+test("«hoy» monta las cuatro secciones de hábitos y el resumen de nutrición", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+  await screen.findByText("Misiones de hoy");
+
+  expect(screen.getByText("Nutrición")).toBeTruthy();
+  expect(screen.getByText("Agua")).toBeTruthy();
+  expect(screen.getByText("Suplementos")).toBeTruthy();
+  expect(screen.getByText("Actividad")).toBeTruthy();
+  expect(screen.getByText("Peso")).toBeTruthy();
+});
+
+test("sin misión de proteína se invita a configurar el objetivo", async () => {
+  // La misión de proteína solo existe si el usuario tiene objetivo nutricional. Que no
+  // esté es la señal de que no lo tiene, y el momento de invitarle.
+  vi.mocked(diaDeHoy).mockResolvedValue({
+    date: "2026-08-20",
+    progress: PROGRESO,
+    quests: [{ key: "water", label: "Beber 2 litros de agua", target: 2000, progress: 0,
+               xp_reward: 20, is_optional: false, completed: false }],
+    suggested_workout: { reason: "", weekly_done: 0, weekly_goal: 3, template: null },
+  } as never);
+
+  pintar();
+
+  expect(await screen.findByRole("link", { name: /CALCULAR MI OBJETIVO/ })).toBeTruthy();
+});
+
+test("con misión de proteína no se invita a nada", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue({
+    date: "2026-08-20",
+    progress: PROGRESO,
+    quests: [{ key: "protein", label: "Llegar a 150 g de proteína", target: 150, progress: 40,
+               xp_reward: 30, is_optional: false, completed: false }],
+    suggested_workout: { reason: "", weekly_done: 0, weekly_goal: 3, template: null },
+  } as never);
+
+  pintar();
+  await screen.findByText("Misiones de hoy");
+
+  expect(screen.queryByRole("link", { name: /CALCULAR MI OBJETIVO/ })).toBe(null);
+});
+
+test("un logro que llega desde una sección abre la ventana del Sistema", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  vi.mocked(anadirAgua).mockResolvedValue({
+    total_ml: 2000, goal_ml: 2000, pct: 100,
+    system: {
+      xp_gained: 20, level_up: null, rank_up: null,
+      achievements_unlocked: [{ key: "hydrated", name: "Hidratado", rarity: "common" }],
+      records: [], quests_completed: ["water"], progress: PROGRESO,
+    } as never,
+  });
+
+  pintar();
+  fireEvent.click(await screen.findByRole("button", { name: "+MEDIO LITRO" }));
+
+  expect(await screen.findByRole("dialog", { name: "El Sistema" })).toBeTruthy();
+  expect(screen.getByText("Hidratado")).toBeTruthy();
 });
