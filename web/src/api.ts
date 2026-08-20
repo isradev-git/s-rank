@@ -425,3 +425,111 @@ export async function recordsPersonales(): Promise<RecordPersonal[]> {
   const crudos = await pedir<RecordPersonal[]>("/exercises/records");
   return crudos.map((r) => ({ ...r, max_weight: Number(r.max_weight) }));
 }
+
+// ── Nutrición ───────────────────────────────────────────────────────────────
+
+import { type TipoComida } from "./recientes";
+import type { Macros, PorCien } from "./formato";
+
+export type { TipoComida };
+
+/** El orden en que se pintan y cómo se dicen. Las claves son las del servidor y no se
+ *  traducen nunca en la petición; las etiquetas no se ven nunca en la petición. */
+export const TIPOS_COMIDA: { clave: TipoComida; etiqueta: string }[] = [
+  { clave: "breakfast", etiqueta: "Desayuno" },
+  { clave: "lunch", etiqueta: "Comida" },
+  { clave: "dinner", etiqueta: "Cena" },
+  { clave: "snack", etiqueta: "Tentempié" },
+];
+
+export type Alimento = PorCien & {
+  id: number;
+  name: string;
+  brand: string | null;
+  category: string | null;
+  /** `g` o `ml`. El cálculo es el mismo: los macros van siempre por 100 unidades. */
+  unit: "g" | "ml";
+  is_verified: boolean;
+  image_path?: string | null;
+};
+
+export type EntradaComida = {
+  uuid: string;
+  meal_type: TipoComida;
+  food_item_id: number | null;
+  custom_food_name: string | null;
+  quantity_grams: number;
+  food_item?: Alimento | null;
+} & Macros;
+
+export type DiaDeComidas = {
+  date: string;
+  meals: Record<TipoComida, { items: EntradaComida[]; calories: number }>;
+  totals: Macros;
+  count: number;
+  calories_burned: number;
+};
+
+const COMIDA_VACIA = { items: [] as EntradaComida[], calories: 0 };
+
+/** ⚠️ `meals` llega como objeto agrupado por tipo, **pero cuando el día está vacío Laravel
+ *  lo serializa como `[]`**, porque una colección con claves sin elementos es un array
+ *  vacío en JSON. Se normaliza aquí, en la puerta, para que ninguna pantalla tenga que
+ *  saberlo: si una sola se olvidara, reventaría el primer día que alguien abre la app. */
+export async function comidasDelDia(fecha: string): Promise<DiaDeComidas> {
+  const crudo = await pedir<Omit<DiaDeComidas, "meals"> & { meals: unknown }>(
+    `/meals?date=${encodeURIComponent(fecha)}`,
+  );
+
+  const agrupadas = (crudo.meals ?? {}) as Partial<DiaDeComidas["meals"]>;
+  const meals = {} as DiaDeComidas["meals"];
+  for (const { clave } of TIPOS_COMIDA) {
+    meals[clave] = agrupadas[clave] ?? { ...COMIDA_VACIA };
+  }
+
+  return { ...crudo, meals };
+}
+
+/** Búsqueda por servidor: el catálogo son 1.506 alimentos y no se baja al móvil. */
+export async function buscarAlimentos(texto: string): Promise<Alimento[]> {
+  const respuesta = await pedir<{ foods: Alimento[] }>(
+    `/foods?search=${encodeURIComponent(texto)}&limit=20`,
+  );
+  return respuesta.foods;
+}
+
+/** Las dos formas que acepta el servidor. Con `food_item_id` calcula él los macros; con
+ *  `custom_food_name` se los damos nosotros. Sin ninguna de las dos responde 422. */
+export type ComidaNueva =
+  | { date: string; meal_type: TipoComida; food_item_id: number; quantity_grams: number }
+  | ({ date: string; meal_type: TipoComida; custom_food_name: string } & Partial<Macros>);
+
+export function registrarComida(datos: ComidaNueva) {
+  return pedir<{ message: string; meal_log: EntradaComida; system: BloqueSistema }>("/meals", {
+    metodo: "POST",
+    cuerpo: datos,
+  });
+}
+
+/** El servidor es idempotente aquí: si ya no existe responde 200, no 404. Así un doble
+ *  toque no saca un error por algo que sí se hizo. */
+export function borrarComida(uuid: string) {
+  return pedir<{ message: string }>(`/meals/${uuid}`, { metodo: "DELETE" });
+}
+
+export type AlimentoNuevo = PorCien & {
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  unit?: "g" | "ml";
+};
+
+/** ⚠️ **No se manda nunca `from_ingredients`.** Ese campo hace que el alimento nazca en el
+ *  catálogo global, con `user_id` a null y visible para todo el mundo. Aquí se crean
+ *  siempre alimentos personales. */
+export function crearAlimento(datos: AlimentoNuevo) {
+  return pedir<{ message: string; food: Alimento }>("/foods", {
+    metodo: "POST",
+    cuerpo: datos,
+  });
+}

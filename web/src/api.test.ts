@@ -160,3 +160,50 @@ test("una lectura no arrastra el token ni el tipo de contenido", async () => {
   expect(cabeceras["X-XSRF-TOKEN"]).toBeUndefined();
   expect(cabeceras["Content-Type"]).toBeUndefined();
 });
+
+import { buscarAlimentos, comidasDelDia } from "./api";
+
+test("un día sin comidas llega como [] y se normaliza a las cuatro claves", async () => {
+  // Laravel serializa una colección con claves vacía como array, no como objeto. Sin
+  // normalizar, la pantalla haría meals.breakfast.items sobre undefined y reventaría
+  // justo el primer día que alguien abre la aplicación.
+  servidorQueResponde(200, {
+    date: "2026-08-20",
+    meals: [],
+    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 },
+    count: 0,
+    calories_burned: 0,
+  });
+
+  const dia = await comidasDelDia("2026-08-20");
+
+  expect(Object.keys(dia.meals)).toEqual(["breakfast", "lunch", "dinner", "snack"]);
+  expect(dia.meals.breakfast).toEqual({ items: [], calories: 0 });
+});
+
+test("las comidas que sí hay se conservan y las que faltan salen vacías", async () => {
+  servidorQueResponde(200, {
+    date: "2026-08-20",
+    meals: { breakfast: { items: [{ uuid: "a", custom_food_name: "Café" }], calories: 88 } },
+    totals: { calories: 88, protein: 4, carbs: 6, fat: 4, fiber: 0, sugar: 6 },
+    count: 1,
+    calories_burned: 0,
+  });
+
+  const dia = await comidasDelDia("2026-08-20");
+
+  expect(dia.meals.breakfast.calories).toBe(88);
+  expect(dia.meals.dinner).toEqual({ items: [], calories: 0 });
+});
+
+test("el buscador manda el texto escapado y desenvuelve la lista", async () => {
+  servidorQueResponde(200, { foods: [{ id: 1, name: "Pollo" }] });
+
+  const encontrados = await buscarAlimentos("aceite & sal");
+
+  expect(encontrados).toHaveLength(1);
+  // Sin escapar, un «&» en el texto cortaría el parámetro y la búsqueda saldría con
+  // otra cosa. `vi.mocked(fetch)` y no el mock suelto: así los argumentos vienen
+  // tipados como los de fetch y `calls[0][0]` existe.
+  expect(vi.mocked(fetch).mock.calls[0][0]).toContain("aceite%20%26%20sal");
+});
