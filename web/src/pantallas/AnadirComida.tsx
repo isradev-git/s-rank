@@ -33,6 +33,13 @@ export default function AnadirComida() {
   const [elegido, setElegido] = useState<Alimento | null>(null);
   const [gramos, setGramos] = useState(100);
 
+  const [aMano, setAMano] = useState(false);
+  const [nombre, setNombre] = useState("");
+  const [kcal, setKcal] = useState("");
+  const [proteina, setProteina] = useState("");
+  const [hidratos, setHidratos] = useState("");
+  const [grasas, setGrasas] = useState("");
+
   useEffect(() => {
     diaDeHoy()
       .then((hoy) => setFecha(hoy.date))
@@ -81,6 +88,38 @@ export default function AnadirComida() {
     }
   }
 
+  const numero = (texto: string) => {
+    const n = Number(texto);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+
+  async function registrarAMano() {
+    if (!fecha) return;
+    setGuardando(true);
+    setFallo(null);
+    try {
+      await registrarComida({
+        date: fecha,
+        meal_type: tipo,
+        custom_food_name: nombre.trim(),
+        calories: numero(kcal),
+        protein: numero(proteina),
+        carbs: numero(hidratos),
+        fat: numero(grasas),
+      });
+      // A propósito, no se apunta en los recientes: sin food_item_id no se puede volver a
+      // registrar de un toque, y un chip que no registra es un botón que miente.
+      navegar("/nutricion");
+    } catch (error) {
+      setFallo(
+        error instanceof ErrorApi && error.fallo.general
+          ? error.fallo.general
+          : "No hemos podido registrarla. Inténtalo otra vez.",
+      );
+      setGuardando(false);
+    }
+  }
+
   return (
     <>
       <TituloPantalla pantalla="añadir comida" />
@@ -116,6 +155,11 @@ export default function AnadirComida() {
         </ul>
       )}
 
+      {/* Con la entrada a mano abierta, el buscador entero se retira. Si no, habría dos
+          botones «AÑADIR» en la misma pantalla y para quien navega con lector de pantalla
+          serían indistinguibles. */}
+      {!aMano && (
+      <>
       <Comentario decorativo>buscar en el catálogo</Comentario>
       <Campo
         etiqueta="Buscar un alimento"
@@ -179,6 +223,40 @@ export default function AnadirComida() {
               { id: elegido.id, nombre: elegido.name, gramos, tipo, kcal100: elegido.calories_per_100g },
               gramos,
             )}
+          >
+            AÑADIR
+          </Boton>
+        </>
+      )}
+      </>
+      )}
+
+      <div className="acciones">
+        <Boton type="button" compacto onClick={() => setAMano((v) => !v)}>
+          {aMano ? "VOLVER AL BUSCADOR" : "A MANO"}
+        </Boton>
+      </div>
+
+      {aMano && (
+        <>
+          <Comentario decorativo>si no está en el catálogo</Comentario>
+          <Campo etiqueta="Qué has comido" name="nombre" value={nombre}
+                 onChange={(e) => setNombre(e.target.value)} />
+          <Campo etiqueta="Calorías" name="kcal" type="number" inputMode="numeric" min="0"
+                 value={kcal} onChange={(e) => setKcal(e.target.value)} />
+          <Campo etiqueta="Proteínas en gramos" name="proteina" type="number"
+                 inputMode="decimal" min="0" value={proteina}
+                 onChange={(e) => setProteina(e.target.value)} />
+          <Campo etiqueta="Hidratos en gramos" name="hidratos" type="number"
+                 inputMode="decimal" min="0" value={hidratos}
+                 onChange={(e) => setHidratos(e.target.value)} />
+          <Campo etiqueta="Grasas en gramos" name="grasas" type="number"
+                 inputMode="decimal" min="0" value={grasas}
+                 onChange={(e) => setGrasas(e.target.value)} />
+          <Boton
+            type="button"
+            disabled={guardando || !fecha || nombre.trim() === "" || kcal.trim() === ""}
+            onClick={() => void registrarAMano()}
           >
             AÑADIR
           </Boton>

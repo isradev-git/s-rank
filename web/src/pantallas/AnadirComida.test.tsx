@@ -177,3 +177,51 @@ test("una búsqueda sin resultados lo dice y ofrece crear el alimento", async ()
   expect(await screen.findByText("no hemos encontrado nada con ese nombre")).toBeTruthy();
   expect(screen.getByRole("link", { name: /CREAR UN ALIMENTO/ })).toBeTruthy();
 });
+
+test("a mano se manda el nombre escrito y los macros, sin id de catálogo", async () => {
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "A MANO" }));
+  fireEvent.change(screen.getByLabelText("Qué has comido"), { target: { value: "Menú del día" } });
+  fireEvent.change(screen.getByLabelText("Calorías"), { target: { value: "780" } });
+  fireEvent.change(screen.getByLabelText("Proteínas en gramos"), { target: { value: "35" } });
+  fireEvent.click(screen.getByRole("button", { name: "AÑADIR" }));
+
+  expect(vi.mocked(registrarComida)).toHaveBeenCalledWith({
+    date: "2026-08-20",
+    meal_type: "breakfast",
+    custom_food_name: "Menú del día",
+    calories: 780,
+    protein: 35,
+    carbs: 0,
+    fat: 0,
+  });
+});
+
+test("a mano no se puede añadir sin nombre ni sin calorías", async () => {
+  pintar();
+  fireEvent.click(await screen.findByRole("button", { name: "A MANO" }));
+
+  const anadir = screen.getByRole("button", { name: "AÑADIR" }) as HTMLButtonElement;
+  expect(anadir.disabled).toBe(true);
+
+  fireEvent.change(screen.getByLabelText("Qué has comido"), { target: { value: "Menú" } });
+  expect((screen.getByRole("button", { name: "AÑADIR" }) as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.change(screen.getByLabelText("Calorías"), { target: { value: "780" } });
+  expect((screen.getByRole("button", { name: "AÑADIR" }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+test("lo escrito a mano no entra en los recientes", async () => {
+  const { recientes } = await import("../recientes");
+  pintar();
+
+  fireEvent.click(await screen.findByRole("button", { name: "A MANO" }));
+  fireEvent.change(screen.getByLabelText("Qué has comido"), { target: { value: "Menú del día" } });
+  fireEvent.change(screen.getByLabelText("Calorías"), { target: { value: "780" } });
+  fireEvent.click(screen.getByRole("button", { name: "AÑADIR" }));
+
+  // Sin food_item_id no se puede volver a registrar de un toque, así que un chip suyo
+  // sería un botón que no hace lo que promete.
+  await vi.waitFor(() => expect(recientes("breakfast")).toEqual([]));
+});
