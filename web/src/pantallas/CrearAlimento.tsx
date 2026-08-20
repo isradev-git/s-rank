@@ -96,15 +96,18 @@ export default function CrearAlimento() {
       <Campo etiqueta="Marca, si la tiene" name="marca" value={marca}
              onChange={(e) => setMarca(e.target.value)} />
 
+      {/* Dos botones y no uno que alterna. El que alternaba decía la acción contraria a lo
+          que había puesto —«MEDIR EN GRAMOS» estando en mililitros—, así que no había forma
+          de leer en qué unidad estabas sin deducirla del botón. */}
+      <Comentario decorativo>en qué se mide</Comentario>
       <div className="acciones">
-        <Boton
-          type="button"
-          compacto
-          aria-pressed={unidad === "ml"}
-          aria-label={unidad === "g" ? "Medir en mililitros" : "Medir en gramos"}
-          onClick={() => setUnidad(unidad === "g" ? "ml" : "g")}
-        >
-          {unidad === "g" ? "MEDIR EN MILILITROS" : "MEDIR EN GRAMOS"}
+        <Boton type="button" compacto aria-pressed={unidad === "g"}
+               aria-label="Gramos" onClick={() => setUnidad("g")}>
+          GRAMOS
+        </Boton>
+        <Boton type="button" compacto aria-pressed={unidad === "ml"}
+               aria-label="Mililitros" onClick={() => setUnidad("ml")}>
+          MILILITROS
         </Boton>
       </div>
 

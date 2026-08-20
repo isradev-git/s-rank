@@ -575,7 +575,11 @@ body {
   margin-top: 1rem;
 }
 
-.modos .boton[aria-pressed="true"] {
+/* Cualquier botón que diga estar pulsado se ve pulsado, no solo los de modo de entreno.
+   Los filtros de categoría de las recetas y el selector de unidad usan lo mismo, y sin
+   esta regla el usuario no tiene forma de ver cuál eligió: la información existía solo
+   para el lector de pantalla. */
+.boton[aria-pressed="true"] {
   background: var(--ambar);
   color: var(--fondo);
 }
@@ -748,6 +752,11 @@ a.boton {
 }
 
 .lista-entradas .nombre { flex: 1; }
+
+/* Un <a> sin color se pinta con el azul por defecto del navegador, que sobre este fondo
+   no se lee. El nombre de una receta es un enlace, así que va en el azul del sistema de
+   diseño, el mismo que usan los demás enlaces de la aplicación. */
+.lista-entradas a.nombre { color: var(--azul); }
 .lista-entradas .cantidad,
 .lista-entradas .kcal { color: var(--apagado); font-size: var(--nota); }
 

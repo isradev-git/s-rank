@@ -62,9 +62,13 @@ test("sin nombre o sin calorías no se puede guardar", () => {
 test("se puede elegir mililitros para lo que se bebe", () => {
   pintar();
 
-  fireEvent.click(screen.getByRole("button", { name: "Medir en mililitros" }));
+  // Gramos es lo de salida, y se ve que lo es.
+  expect(screen.getByRole("button", { name: "Gramos" }).getAttribute("aria-pressed")).toBe("true");
+
+  fireEvent.click(screen.getByRole("button", { name: "Mililitros" }));
 
   expect(screen.getByLabelText("Calorías por 100 ml")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Mililitros" }).getAttribute("aria-pressed")).toBe("true");
 });
 
 test("la foto se sube después de crear el alimento, contra el id que devolvió", async () => {
