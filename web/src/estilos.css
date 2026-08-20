@@ -749,3 +749,12 @@ a.boton {
   font: inherit;
   font-size: var(--nota);
 }
+
+.foto-elegible { margin-top: 0.75rem; }
+
+.vista-previa {
+  display: block;
+  max-width: 100%;
+  margin: 0.5rem 0;
+  border: 1px solid var(--lineas);
+}

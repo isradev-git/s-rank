@@ -486,3 +486,46 @@ export function ChipComida({
     </li>
   );
 }
+
+/** Elegir una foto, verla antes de subirla y quitarla.
+ *
+ *  ⚠️ La vista previa es un `blob:` de la propia página, y la CSP del servidor lleva
+ *  `img-src 'self' blob:` justo por esto. Con `'self'` a secas el hueco sale en blanco
+ *  **solo en producción** y sin ningún error visible. */
+export function FotoElegible({
+  vistaPrevia,
+  onElegir,
+  onQuitar,
+  disabled,
+}: {
+  vistaPrevia: string | null;
+  onElegir: (fichero: File) => void;
+  onQuitar: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="foto-elegible">
+      <label className="campo">
+        <span>Foto, si quieres</span>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={disabled}
+          onChange={(e) => {
+            const fichero = e.target.files?.[0];
+            if (fichero) onElegir(fichero);
+          }}
+        />
+      </label>
+
+      {vistaPrevia && (
+        <>
+          <img className="vista-previa" src={vistaPrevia} alt="La foto que has elegido" />
+          <Boton type="button" compacto disabled={disabled} onClick={onQuitar}>
+            QUITAR LA FOTO
+          </Boton>
+        </>
+      )}
+    </div>
+  );
+}

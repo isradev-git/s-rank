@@ -7,7 +7,13 @@ import CrearAlimento from "./CrearAlimento";
 vi.mock("../api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api")>()),
   crearAlimento: vi.fn(),
+  subir: vi.fn(),
 }));
+
+// jsdom no trae createImageBitmap ni el 2d del canvas, así que encoger() tumbaría el test
+// por el entorno y no por el código. Lo que encoge ya está probado en foto.test.ts; aquí
+// lo que importa es contra qué id se sube.
+vi.mock("../foto", () => ({ encoger: vi.fn(async (f: File) => f) }));
 
 const pintar = () => render(<MemoryRouter><CrearAlimento /></MemoryRouter>);
 
@@ -59,4 +65,21 @@ test("se puede elegir mililitros para lo que se bebe", () => {
   fireEvent.click(screen.getByRole("button", { name: "Medir en mililitros" }));
 
   expect(screen.getByLabelText("Calorías por 100 ml")).toBeTruthy();
+});
+
+test("la foto se sube después de crear el alimento, contra el id que devolvió", async () => {
+  const { subir } = await import("../api");
+  vi.mocked(subir).mockResolvedValue({ image_path: "nutrition/foods/x.jpg" } as never);
+  pintar();
+
+  fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Bizcocho" } });
+  fireEvent.change(screen.getByLabelText("Calorías por 100 g"), { target: { value: "410" } });
+  fireEvent.change(screen.getByLabelText("Foto, si quieres"), {
+    target: { files: [new File(["x"], "b.jpg", { type: "image/jpeg" })] },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+
+  await vi.waitFor(() =>
+    expect(vi.mocked(subir)).toHaveBeenCalledWith("/foods/42/image", "image", expect.any(File)),
+  );
 });
