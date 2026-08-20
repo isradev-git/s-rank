@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\WorkoutStored;
 use App\Http\Controllers\Controller;
 use App\Models\Workout;
 use Carbon\Carbon;
@@ -71,11 +72,18 @@ class ActivityController extends Controller
             $log = Workout::create($payload);
         }
 
+        // El módulo avisa; el Sistema decide. afterWorkout() ya se salta el XP cuando el
+        // modo es «pasos» y cierra el día igual, así que publicar el evento es todo lo
+        // que hace falta para que apuntar los pasos mantenga la racha.
+        $event = new WorkoutStored($log);
+        event($event);
+
         return response()->json([
             'message' => 'Actividad diaria guardada.',
             'date' => Carbon::parse($log->date)->format('Y-m-d'),
             'steps' => (int) $validated['steps'],
             'calories_burned' => (int) round((float) $log->calories_burned),
+            'system' => $event->rewards,
         ]);
     }
 }
