@@ -70,15 +70,24 @@ export function Comentario({
   );
 }
 
-/** Diez bloques en línea propia. Se oyen como un porcentaje, no como veinte caracteres. */
-export function BarraBloques({ porcentaje }: { porcentaje: number }) {
+/** Diez bloques en línea propia. Se oyen como un porcentaje, no como veinte caracteres.
+ *
+ *  La etiqueta se puede cambiar porque ahora la usan dos cosas: el nivel y el agua. Sin
+ *  eso, la barra del agua se oiría «Progreso hacia el siguiente nivel», que es mentira. */
+export function BarraBloques({
+  porcentaje,
+  etiqueta = "Progreso hacia el siguiente nivel",
+}: {
+  porcentaje: number;
+  etiqueta?: string;
+}) {
   const llenos = bloquesEncendidos(porcentaje);
   const pct = llenos * (100 / BLOQUES);
   return (
     <p
       className="barra-bloques"
       role="progressbar"
-      aria-label="Progreso hacia el siguiente nivel"
+      aria-label={etiqueta}
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
