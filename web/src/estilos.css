@@ -761,3 +761,5 @@ a.boton {
 
 .lista-opciones { padding: 0; margin: 0.5rem 0 0; list-style: none; }
 .lista-opciones li { margin-bottom: 0.5rem; }
+
+.instrucciones { margin: 0.5rem 0 0; font-size: var(--cuerpo); white-space: pre-wrap; }

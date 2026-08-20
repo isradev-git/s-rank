@@ -692,3 +692,81 @@ export async function subir<T>(ruta: string, campo: string, fichero: File): Prom
 
   throw new ErrorApi({ general: "No hemos podido subir la foto. Inténtalo otra vez.", campos: {} });
 }
+
+// ── Recetas ─────────────────────────────────────────────────────────────────
+
+/** Las categorías del servidor. Ojo: **`almuerzo`, no `lunch`** — las recetas usan
+ *  castellano y las comidas inglés. No se pueden mezclar. */
+export type CategoriaReceta = "desayuno" | "almuerzo" | "cena" | "snack";
+
+/** El `meal_type` que le toca a cada categoría cuando se registra como comida. */
+export const COMIDA_DE_CATEGORIA: Record<CategoriaReceta, TipoComida> = {
+  desayuno: "breakfast",
+  almuerzo: "lunch",
+  cena: "dinner",
+  snack: "snack",
+};
+
+export type Receta = {
+  id: number;
+  name: string;
+  description: string | null;
+  category: CategoriaReceta;
+  image_path: string | null;
+  /** Los macros van **por ración**, no por 100 g. */
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  fiber_per_serving: number;
+  servings: number;
+  prep_time_min: number;
+  cook_time_min: number;
+  difficulty: string;
+  is_system: boolean;
+  user_id: string | null;
+  ingredients?: { name: string; quantity: string }[];
+  instructions?: string;
+};
+
+export async function recetas(filtros: { category?: CategoriaReceta; search?: string } = {}) {
+  const parametros = new URLSearchParams();
+  if (filtros.category) parametros.set("category", filtros.category);
+  if (filtros.search) parametros.set("search", filtros.search);
+  const respuesta = await pedir<{ recipes: Receta[] }>(`/recipes?${parametros}`);
+  return respuesta.recipes;
+}
+
+export async function receta(id: number) {
+  const respuesta = await pedir<{ recipe: Receta }>(`/recipes/${id}`);
+  return respuesta.recipe;
+}
+
+export type RecetaNueva = {
+  name: string;
+  description?: string | null;
+  category: CategoriaReceta;
+  calories_per_serving: number;
+  protein_per_serving?: number;
+  carbs_per_serving?: number;
+  fat_per_serving?: number;
+  servings?: number;
+  prep_time_min?: number;
+  cook_time_min?: number;
+  ingredients?: { name: string; quantity: string }[];
+  instructions?: string;
+  difficulty?: "fácil" | "media" | "difícil";
+};
+
+/** ⚠️ El servidor guarda toda receta de usuario con `is_system = true`, o sea **visible
+ *  para el resto de personas de la instancia**. No se arregla en esta fase porque cambia
+ *  la visibilidad de filas que ya están en producción, pero la pantalla que llama a esto
+ *  **tiene que avisar antes de guardar**. */
+export async function crearReceta(datos: RecetaNueva) {
+  const respuesta = await pedir<{ recipe: Receta }>("/recipes", { metodo: "POST", cuerpo: datos });
+  return respuesta.recipe;
+}
+
+export function borrarReceta(id: number) {
+  return pedir<{ message: string }>(`/recipes/${id}`, { metodo: "DELETE" });
+}

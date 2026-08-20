@@ -18,6 +18,7 @@ import Login from "./pantallas/Login";
 import Nutricion from "./pantallas/Nutricion";
 import Objetivo from "./pantallas/Objetivo";
 import Plantillas from "./pantallas/Plantillas";
+import Recetas, { Receta } from "./pantallas/Recetas";
 import Recuperar from "./pantallas/Recuperar";
 import Registro from "./pantallas/Registro";
 import Resumen from "./pantallas/Resumen";
@@ -200,6 +201,9 @@ export default function App() {
         <Route path="/nutricion/anadir" element={<AnadirComida />} />
         <Route path="/nutricion/alimento/nuevo" element={<CrearAlimento />} />
         <Route path="/nutricion/objetivo" element={<Objetivo />} />
+        <Route path="/nutricion/recetas" element={<Recetas />} />
+        {/* La dinámica va la última: si fuera antes, «nueva» la capturaría como un id. */}
+        <Route path="/nutricion/recetas/:id" element={<Receta />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
