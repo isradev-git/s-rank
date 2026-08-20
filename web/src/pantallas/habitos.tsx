@@ -191,9 +191,12 @@ export function SeccionActividad({
   }
 
   return (
+    // Plegada de salida: son dos campos que se rellenan una vez al día, y abiertos
+    // empujaban el peso media pantalla hacia abajo. El resumen sigue diciendo los pasos.
     <Seccion
       titulo="Actividad"
       resumen={guardado && guardado > 0 ? `${guardado} pasos` : "sin apuntar"}
+      abierta={false}
     >
       {fallo && <p className="aviso" role="alert">{fallo}</p>}
 
@@ -203,9 +206,14 @@ export function SeccionActividad({
              type="number" inputMode="numeric" min="0" max="10000" value={calorias}
              onChange={(e) => setCalorias(e.target.value)} />
 
-      <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
-        {guardando ? "GUARDANDO…" : "GUARDAR"}
-      </Boton>
+      {/* Dentro de `acciones` para que tenga aire por arriba: un botón compacto suelto
+          lleva margen cero y salía pegado al campo de encima. */}
+      <div className="acciones">
+        <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
+          {/* «GUARDAR» a secas lo dice también el peso, y en «hoy» están los dos. */}
+          {guardando ? "GUARDANDO…" : "GUARDAR LOS PASOS"}
+        </Boton>
+      </div>
     </Seccion>
   );
 }
@@ -240,15 +248,18 @@ export function SeccionPeso({
   }
 
   return (
-    <Seccion titulo="Peso" resumen={pesoActual == null ? "sin apuntar" : `${pesoActual} kg`}>
+    <Seccion titulo="Peso" resumen={pesoActual == null ? "sin apuntar" : `${pesoActual} kg`}
+             abierta={false}>
       {fallo && <p className="aviso" role="alert">{fallo}</p>}
 
       <Campo etiqueta="Peso en kilos" name="peso" type="number" inputMode="decimal"
              step="0.1" min="0" value={kilos} onChange={(e) => setKilos(e.target.value)} />
 
-      <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
-        {guardando ? "GUARDANDO…" : "GUARDAR"}
-      </Boton>
+      <div className="acciones">
+        <Boton type="button" compacto disabled={guardando} onClick={() => void guardar()}>
+          {guardando ? "GUARDANDO…" : "GUARDAR EL PESO"}
+        </Boton>
+      </div>
     </Seccion>
   );
 }

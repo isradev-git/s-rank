@@ -5,7 +5,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import type { BloqueSistema } from "./api";
-import { Aviso, FilaSerie, VentanaSistema } from "./componentes";
+import { Aviso, FilaSerie, Seccion, TituloPantalla, VentanaSistema } from "./componentes";
 import type { Serie } from "./borrador";
 
 function sistema(campos: Partial<BloqueSistema> = {}): BloqueSistema {
@@ -270,4 +270,52 @@ test("el chip de un reciente registra con un toque y ajustar es otro botón", ()
   // teclear y en el móvil pelea con el menú del navegador.
   fireEvent.click(screen.getByRole("button", { name: "Cambiar la cantidad de Café con leche" }));
   expect(ajustados).toHaveLength(1);
+});
+
+import { UsuarioActual } from "./componentes";
+
+test("una pantalla dentro de la sesión dice el nombre, no «invitado»", () => {
+  render(
+    <UsuarioActual.Provider value="Israel Zamora">
+      <TituloPantalla pantalla="mi objetivo" />
+    </UsuarioActual.Provider>,
+  );
+
+  // Pasarlo como prop a cada pantalla garantizaba que la siguiente se olvidara: la de
+  // registrar el peso salía como «invitado» estando la sesión abierta.
+  expect(screen.getByRole("heading").textContent).toContain("israel@s-rank");
+});
+
+test("fuera de la sesión sigue siendo «invitado»", () => {
+  // Login, registro y recuperar viven fuera del proveedor y ahí no hay nadie todavía.
+  render(<TituloPantalla pantalla="entrar" />);
+  expect(screen.getByRole("heading").textContent).toContain("invitado@s-rank");
+});
+
+test("el nombre que se pasa a mano gana al del contexto", () => {
+  render(
+    <UsuarioActual.Provider value="Israel">
+      <TituloPantalla pantalla="hoy" usuario="Otra Persona" />
+    </UsuarioActual.Provider>,
+  );
+  expect(screen.getByRole("heading").textContent).toContain("otra@s-rank");
+});
+
+test("una sección puede empezar plegada, y su resumen se lee igual", () => {
+  render(
+    <Seccion titulo="Peso" resumen="100 kg" abierta={false}>
+      <p>El campo de escribir el peso</p>
+    </Seccion>,
+  );
+
+  // Plegada sigue diciendo el dato: «Peso, 100 kg». Lo que se ahorra es el formulario,
+  // que solo hace falta el rato de escribir en él.
+  expect(screen.getByText("Peso")).toBeTruthy();
+  expect(screen.getByText("100 kg")).toBeTruthy();
+  expect(document.querySelector("details")!.hasAttribute("open")).toBe(false);
+});
+
+test("por defecto las secciones siguen abiertas", () => {
+  render(<Seccion titulo="Agua" resumen="1,5 de 2 litros"><p>La barra</p></Seccion>);
+  expect(document.querySelector("details")!.hasAttribute("open")).toBe(true);
 });

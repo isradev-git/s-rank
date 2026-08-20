@@ -9,7 +9,7 @@ import {
   type Usuario,
 } from "./api";
 import { pendientes, subirPendientes } from "./borrador";
-import { Aviso, Boton, Comentario, TituloPantalla, VentanaSistema } from "./componentes";
+import { Aviso, Boton, Comentario, TituloPantalla, UsuarioActual, VentanaSistema } from "./componentes";
 import AnadirComida from "./pantallas/AnadirComida";
 import CrearAlimento from "./pantallas/CrearAlimento";
 import CrearReceta from "./pantallas/CrearReceta";
@@ -184,6 +184,10 @@ export default function App() {
   }
 
   return (
+    // Todas las pantallas de dentro llevan el nombre en su prompt sin tener que recibirlo:
+    // lo saca TituloPantalla de aquí. Las de fuera —login, registro, recuperar— quedan
+    // fuera del proveedor a propósito, porque ahí «invitado» es la verdad.
+    <UsuarioActual.Provider value={usuario.name}>
     <Routes>
       <Route element={<ConPestanas />}>
         <Route index element={<Hoy usuario={usuario} />} />
@@ -209,5 +213,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </UsuarioActual.Provider>
   );
 }

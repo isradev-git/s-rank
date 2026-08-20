@@ -3,7 +3,7 @@
    Y la decoración —el `$`, los `[✓]`, las flechas— va marcada aria-hidden para que
    el lector de pantalla no la lea. Spec §5.1. */
 
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import type { BloqueSistema, Mision, SerieAnterior } from "./api";
 import type { Modo, Serie } from "./borrador";
@@ -19,6 +19,16 @@ import type { Macros } from "./formato";
 // servidor dice «8.000 pasos». Las dos formas juntas en la misma fila parecen un fallo.
 const NUMEROS = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
 
+/** Quién tiene la sesión abierta. Lo pone `App` una vez, alrededor de las rutas de dentro,
+ *  y lo lee `TituloPantalla`, que está en todas las pantallas.
+ *
+ *  La alternativa era pasar el nombre como prop a las quince, y eso ya falló: solo «hoy» y
+ *  «perfil» lo pasaban, así que apuntar el peso o crear una receta salían como «invitado»
+ *  con la sesión abierta. Con una prop, la pantalla dieciséis se vuelve a olvidar.
+ *
+ *  Login, registro y recuperar viven fuera del proveedor: ahí «invitado» es la verdad. */
+export const UsuarioActual = createContext<string | null>(null);
+
 /** `israel[E]@s-rank $ hoy`.
  *
  *  Todo lo que hay antes del nombre de la pantalla es dibujo: va aria-hidden y el lector
@@ -31,12 +41,14 @@ export function TituloPantalla({
   rango,
 }: {
   pantalla: string;
+  /** Solo hace falta para ganarle al contexto. Sin esto, el nombre sale de `UsuarioActual`. */
   usuario?: string;
   rango?: string;
 }) {
+  const enSesion = useContext(UsuarioActual);
   // «Israel Zamora» en un prompt queda raro y además parte la línea. Se usa el primer
   // nombre en minúscula, como el usuario de un terminal de verdad.
-  const nombre = usuario?.trim().split(" ")[0]?.toLowerCase() || "invitado";
+  const nombre = (usuario ?? enSesion)?.trim().split(" ")[0]?.toLowerCase() || "invitado";
 
   return (
     <h1 className="titulo-pantalla">
@@ -137,15 +149,19 @@ export function FilaMision({ mision }: { mision: Mision }) {
 export function Seccion({
   titulo,
   resumen,
+  abierta = true,
   children,
 }: {
   titulo: string;
   /** Sin corchetes: los pone el componente, y van aria-hidden. */
   resumen: string;
+  /** Plegada de salida para lo que se escribe de vez en cuando. El resumen sigue viéndose,
+   *  así que el dato no se esconde: lo que se ahorra es el formulario. */
+  abierta?: boolean;
   children: ReactNode;
 }) {
   return (
-    <details className="seccion" open>
+    <details className="seccion" open={abierta}>
       <summary>
         <span className="flecha inicial" aria-hidden="true" />
         <span className="titulo-seccion">{titulo}</span>

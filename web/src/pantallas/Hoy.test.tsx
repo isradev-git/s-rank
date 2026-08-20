@@ -323,3 +323,15 @@ test("un logro que llega desde una sección abre la ventana del Sistema", async 
   expect(await screen.findByRole("dialog", { name: "El Sistema" })).toBeTruthy();
   expect(screen.getByText("Hidratado")).toBeTruthy();
 });
+
+test("no hay dos botones con el mismo nombre en la pantalla", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  pintar();
+  await screen.findByText("Misiones de hoy");
+
+  // Actividad y Peso tenían los dos un botón «GUARDAR». Se ven distintos porque están en
+  // sitios distintos, pero quien navega con lector de pantalla oye la misma palabra dos
+  // veces y no sabe cuál guarda qué.
+  const nombres = screen.getAllByRole("button").map((b) => b.textContent);
+  expect(new Set(nombres).size).toBe(nombres.length);
+});

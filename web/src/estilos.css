@@ -196,6 +196,10 @@ body {
 .seccion {
   margin-top: 1.5rem;
   border-top: 1px solid var(--lineas);
+  /* El contenido de una sección terminaba pegado a la línea de la siguiente. Con nueve
+     secciones seguidas en «hoy» eso se lee como un bloque continuo en vez de como nueve
+     cosas distintas. */
+  padding-bottom: 1.25rem;
 }
 
 .seccion > summary {
@@ -659,9 +663,16 @@ a.boton {
 .casilla.marcada .marca { color: var(--verde); }
 .casilla:disabled { opacity: 0.6; }
 
+/* El `[ ]` es una unidad y no puede partirse: con «Multivitaminas» al lado, el corchete
+   de cierre se caía a la línea de abajo y la casilla salía descuadrada. */
+.casilla .marca { white-space: nowrap; }
+
 .rejilla-casillas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  /* 12rem y no 9: con 9 caben tres columnas y «Multivitaminas» no entra en ninguna, así
+     que se parte. Con 12 son dos por fila, que es lo que este bloque quería desde el
+     principio, y la cuarta ya no queda suelta en una fila para ella sola. */
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 0.5rem;
   padding: 0;
   margin: 0.5rem 0 0;

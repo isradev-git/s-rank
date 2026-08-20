@@ -149,7 +149,7 @@ test("los pasos se guardan y las calorías, si no se saben, van a cero", async (
   render(<SeccionActividad fecha="2026-08-20" alGanar={() => {}} />);
 
   fireEvent.change(await screen.findByLabelText("Pasos"), { target: { value: "8200" } });
-  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR LOS PASOS" }));
 
   // El servidor exige las dos cifras. Mucha gente solo conoce sus pasos, y estimar las
   // calorías sería inventarse un dato de salud.
@@ -170,7 +170,7 @@ test("apuntar el peso lo manda en kilos y sube el bloque system", async () => {
   render(<SeccionPeso pesoActual={78} alGanar={(s) => ganados.push(s)} />);
 
   fireEvent.change(screen.getByLabelText("Peso en kilos"), { target: { value: "77.5" } });
-  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR EL PESO" }));
 
   expect(vi.mocked(guardarPeso)).toHaveBeenCalledWith(77.5);
   await vi.waitFor(() => expect(ganados).toEqual([bloque]));
@@ -181,7 +181,7 @@ test("si el peso no cambia el servidor manda system a null y no se sube nada", a
   vi.mocked(guardarPeso).mockResolvedValue({ user: {} as never, system: null });
   render(<SeccionPeso pesoActual={78} alGanar={(s) => ganados.push(s)} />);
 
-  fireEvent.click(screen.getByRole("button", { name: "GUARDAR" }));
+  fireEvent.click(screen.getByRole("button", { name: "GUARDAR EL PESO" }));
 
   await vi.waitFor(() => expect(vi.mocked(guardarPeso)).toHaveBeenCalled());
   expect(ganados).toEqual([]);
