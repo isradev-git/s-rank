@@ -84,6 +84,29 @@ if [[ -d deploy/vendor/phpunit ]]; then
   exit 1
 fi
 
+# ── El paquete tiene que estar completo ───────────────────────────────────────
+# Lo que se sube por FTP sustituye a lo que hay, pero solo a los ficheros que lleva
+# dentro: lo que no viene en el paquete se queda en el servidor tal cual estaba. Por eso
+# «completo» no es una promesa, es una lista que se comprueba.
+#
+# El index.php de la raíz entró en esta lista después de un despliegue que dejó el sitio
+# entero contestando «No se pudo localizar la raiz de Laravel»: en la raíz del subdominio
+# seguía el index.php de FitLoop y no había nada que lo sobrescribiera.
+faltan=()
+for necesario in \
+  index.php .htaccess .env artisan composer.json \
+  public/index.php public/.htaccess public/index.html \
+  app bootstrap config database lang routes storage vendor/autoload.php
+do
+  [[ -e "deploy/$necesario" ]] || faltan+=("$necesario")
+done
+
+if (( ${#faltan[@]} )); then
+  echo "ERROR: el paquete está incompleto. Falta:" >&2
+  printf '  %s\n' "${faltan[@]}" >&2
+  exit 1
+fi
+
 # Datos efímeros de desarrollo: no viajan
 find deploy/storage/framework/sessions \
      deploy/storage/framework/cache \
