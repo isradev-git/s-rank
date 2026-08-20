@@ -352,3 +352,35 @@ test("si el resumen de nutrición falla, las misiones se siguen viendo", async (
   // Y la sección de nutrición dice lo suyo, sin números inventados.
   expect(screen.getByText("no hemos podido cargar lo que llevas comido")).toBeTruthy();
 });
+
+test("cuando algo falla, la pantalla apunta qué petición fue", async () => {
+  // En el móvil no hay consola donde leer el código, y con APP_DEBUG=false el motivo solo
+  // está en el log del servidor. Sin esto, «No hemos podido conectar» no distingue entre
+  // que se caiga /system/today y que se caiga /meals, que son dos problemas distintos.
+  vi.mocked(diaDeHoy).mockRejectedValue(
+    new ErrorApi({
+      general: "No hemos podido conectar. Inténtalo otra vez.",
+      campos: {},
+      detalle: "GET /system/today → 500",
+    }),
+  );
+
+  pintar();
+
+  expect(await screen.findByText("GET /system/today → 500")).toBeTruthy();
+});
+
+test("si falla solo el resumen, el apunte va en la sección de nutrición", async () => {
+  vi.mocked(diaDeHoy).mockResolvedValue(DIA);
+  vi.mocked(comidasDelDia).mockRejectedValue(
+    new ErrorApi({
+      general: "No hemos podido conectar. Inténtalo otra vez.",
+      campos: {},
+      detalle: "GET /meals?date=2026-08-20 → 500",
+    }),
+  );
+
+  pintar();
+
+  expect(await screen.findByText("GET /meals?date=2026-08-20 → 500")).toBeTruthy();
+});

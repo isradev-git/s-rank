@@ -10,6 +10,14 @@ export type Fallo = {
   general: string | null;
   /** Los de validación, uno por campo, ya capitalizados. */
   campos: Record<string, string>;
+  /** Qué petición se rompió y con qué código. Va aparte del mensaje a propósito: el
+   *  usuario lee `general`, que nunca lleva números, y esto es para mirarlo cuando algo
+   *  se cae. Se pinta como comentario, que es donde va lo secundario.
+   *
+   *  ponytail: existe porque en el móvil no hay consola donde leer el 500 y el motivo
+   *  solo está en el log del servidor, al que no se llega sin FTP. Se quita cuando la
+   *  fase 1.3 esté comprobada, o se queda si vuelve a hacer falta. */
+  detalle?: string;
 };
 
 export class ErrorApi extends Error {
@@ -131,6 +139,7 @@ export async function pedir<T>(
   throw new ErrorApi({
     general: "No hemos podido conectar. Inténtalo otra vez.",
     campos: {},
+    detalle: `${metodo} ${ruta} → ${respuesta.status}`,
   });
 }
 

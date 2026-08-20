@@ -81,6 +81,14 @@ test("un 500 no enseña ningún número", async () => {
   expect(fallo.general).not.toMatch(/\d{3}/);
 });
 
+test("un 500 deja apuntado aparte qué petición falló", async () => {
+  servidorQueResponde(500, { message: "Server Error" });
+
+  const fallo = await falloDe(pedir("/system/today"));
+
+  expect(fallo.detalle).toBe("GET /system/today → 500");
+});
+
 test("un 401 avisa de que la sesión ha caducado", async () => {
   servidorQueResponde(401, { message: "Unauthenticated." });
   const avisado = vi.fn();

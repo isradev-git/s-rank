@@ -35,6 +35,12 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
 
+  // Qué petición se rompió, para poder mirarlo sin consola y sin el log del servidor.
+  // Va en dos sitios porque son dos fallos distintos: uno tumba la pantalla y el otro
+  // solo la sección de nutrición, y confundirlos ya costó un despliegue a ciegas.
+  const [detalle, setDetalle] = useState<string | null>(null);
+  const [detalleNutricion, setDetalleNutricion] = useState<string | null>(null);
+
   const [resumen, setResumen] = useState<DiaDeComidas | null>(null);
   const [objetivo, setObjetivo] = useState<number | null>(null);
   // Lo que abre la ventana del Sistema. Se guarda aquí y no en cada sección: si cada una
@@ -66,9 +72,11 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
       ]);
       setResumen(comidas);
       setObjetivo(meta.has_goal ? meta.goal.daily_calories : null);
-    } catch {
+      setDetalleNutricion(null);
+    } catch (error) {
       // Sin cifras no se inventa ninguna: la sección lo dice con palabras.
       setResumen(null);
+      setDetalleNutricion(error instanceof ErrorApi ? (error.fallo.detalle ?? null) : null);
     }
   }, []);
 
@@ -78,6 +86,7 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
       const dia = await diaDeHoy();
       setDatos(dia);
       setFallo(null);
+      setDetalle(null);
       void cargarNutricion(dia.date);
     } catch (error) {
       // El fallo se enseña aunque haya datos viejos en pantalla. Tragárselo porque «algo
@@ -87,6 +96,7 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
           ? error.fallo.general
           : "No hemos podido conectar. Inténtalo otra vez.",
       );
+      setDetalle(error instanceof ErrorApi ? (error.fallo.detalle ?? null) : null);
     } finally {
       setCargando(false);
     }
@@ -129,6 +139,7 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
             <p className="aviso" role="alert">
               {fallo}
             </p>
+            {detalle && <Comentario>{detalle}</Comentario>}
             <Boton type="button" onClick={() => void cargar()}>
               REINTENTAR
             </Boton>
@@ -149,9 +160,12 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
       <Comentario>{FECHA.format(new Date(`${datos.date}T00:00:00Z`))}</Comentario>
 
       {fallo && (
-        <p className="aviso" role="alert">
-          {fallo}
-        </p>
+        <>
+          <p className="aviso" role="alert">
+            {fallo}
+          </p>
+          {detalle && <Comentario>{detalle}</Comentario>}
+        </>
       )}
 
       <div className="fila-nivel">
@@ -229,7 +243,10 @@ export default function Hoy({ usuario }: { usuario: Usuario }) {
           </>
         ) : (
           // Un cero aquí sería mentira: no es que no hayas comido, es que no lo sabemos.
-          <Comentario>no hemos podido cargar lo que llevas comido</Comentario>
+          <>
+            <Comentario>no hemos podido cargar lo que llevas comido</Comentario>
+            {detalleNutricion && <Comentario>{detalleNutricion}</Comentario>}
+          </>
         )}
 
         <div className="acciones">
