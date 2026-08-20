@@ -12,6 +12,7 @@ import { pendientes, subirPendientes } from "./borrador";
 import { Aviso, Boton, Comentario, TituloPantalla, VentanaSistema } from "./componentes";
 import AnadirComida from "./pantallas/AnadirComida";
 import CrearAlimento from "./pantallas/CrearAlimento";
+import CrearReceta from "./pantallas/CrearReceta";
 import Elegir from "./pantallas/Elegir";
 import Hoy from "./pantallas/Hoy";
 import Login from "./pantallas/Login";
@@ -202,6 +203,7 @@ export default function App() {
         <Route path="/nutricion/alimento/nuevo" element={<CrearAlimento />} />
         <Route path="/nutricion/objetivo" element={<Objetivo />} />
         <Route path="/nutricion/recetas" element={<Recetas />} />
+        <Route path="/nutricion/recetas/nueva" element={<CrearReceta />} />
         {/* La dinámica va la última: si fuera antes, «nueva» la capturaría como un id. */}
         <Route path="/nutricion/recetas/:id" element={<Receta />} />
       </Route>
